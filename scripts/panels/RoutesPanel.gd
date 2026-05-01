@@ -29,8 +29,11 @@ func _ready() -> void:
 	refresh()
 
 func refresh() -> void:
+	if _vbox == null:
+		return
 	_progress_labels.clear()
 	for child in _vbox.get_children():
+		_vbox.remove_child(child)
 		child.queue_free()
 	if _picker:
 		_picker.queue_free()
@@ -91,8 +94,8 @@ func _route_card(route_idx: int) -> Control:
 	vbox.add_theme_constant_override("separation", 3)
 	card.add_child(vbox)
 
-	vbox.add_child(_lbl("%s  →  %s" % [route["origin"], route["destination"]], C_TEXT, 12))
-	vbox.add_child(_lbl("%s → %s" % [route["origin_city"], route["destination_city"]], C_DIM, 10))
+	vbox.add_child(_lbl("%s  ->  %s" % [route["origin"], route["destination"]], C_TEXT, 12))
+	vbox.add_child(_lbl("%s -> %s" % [route["origin_city"], route["destination_city"]], C_DIM, 10))
 	vbox.add_child(_lbl("%d mi  |  Ticket: %s" % [route["distance_mi"], GameState.format_money(route["ticket_price"])], C_DIM, 10))
 	vbox.add_child(_sep())
 

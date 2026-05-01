@@ -36,9 +36,12 @@ func _on_repair_completed(_plane_idx: int) -> void:
 	refresh()
 
 func refresh() -> void:
+	if _vbox == null:
+		return
 	_progress_labels.clear()
 	_repair_labels.clear()
 	for child in _vbox.get_children():
+		_vbox.remove_child(child)
 		child.queue_free()
 	_vbox.add_child(_section_header("FLEET"))
 	for i in GameState.planes.size():
@@ -120,7 +123,7 @@ func _plane_card(plane_idx: int) -> Control:
 	var route_suffix := ""
 	if status == "flying":
 		var r: Dictionary = GameState.routes[int(plane["assigned_route"])]
-		route_suffix = "  (%s → %s)" % [r["origin"], r["destination"]]
+		route_suffix = "  (%s -> %s)" % [r["origin"], r["destination"]]
 	vbox.add_child(_lbl("Seats: %d  |  %s%s" % [plane["seats"], status.capitalize(), route_suffix], _status_color(status), 10))
 	vbox.add_child(_lbl("Total flights: %d" % int(plane["total_flights"]), C_DIM, 10))
 
