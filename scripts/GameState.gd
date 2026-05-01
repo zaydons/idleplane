@@ -73,9 +73,12 @@ const PLANE_CATALOG: Array = [
 	},
 ]
 
-var airline_name := "Sky Haven Airways"
-var cash         := 75000.0
-var time_scale   := 1.0
+var airline_name   := "Sky Haven Airways"
+var cash           := 75000.0
+var time_scale     := 1.0
+var total_earned   := 0.0
+var total_spent    := 0.0
+var flight_log     : Array = []   # [{route, amount}], newest first, capped at 60
 
 var planes: Array = [
 	{
@@ -241,10 +244,17 @@ func _complete_flight(route_idx: int) -> void:
 	var route: Dictionary = routes[route_idx]
 	var plane: Dictionary = planes[int(route["assigned_plane"])]
 	var revenue := float(route["ticket_price"]) * float(plane["seats"]) * float(route["occupancy_rate"])
-	cash += revenue
+	cash         += revenue
+	total_earned += revenue
 	cash_changed.emit()
 	plane["condition"] = maxf(0.0, float(plane["condition"]) - float(plane["wear_per_flight"]))
 	plane["total_flights"] = int(plane["total_flights"]) + 1
+	flight_log.push_front({
+		"route":  "%s -> %s" % [route["origin"], route["destination"]],
+		"amount": revenue,
+	})
+	if flight_log.size() > 60:
+		flight_log.resize(60)
 	flight_completed.emit(route_idx)
 
 # ── Assignment ────────────────────────────────────────────────────────────────
@@ -286,7 +296,8 @@ func unlock_route(route_idx: int) -> void:
 	var cost := float(route["unlock_cost"])
 	if cash < cost:
 		return
-	cash -= cost
+	cash        -= cost
+	total_spent += cost
 	cash_changed.emit()
 	route["locked"] = false
 	assignment_changed.emit()
@@ -315,7 +326,9 @@ func buy_used_plane(market_idx: int) -> void:
 	var listing: Dictionary = used_market[market_idx]
 	if cash < float(listing["price"]):
 		return
-	cash -= float(listing["price"])
+	var price := float(listing["price"])
+	cash        -= price
+	total_spent += price
 	cash_changed.emit()
 	planes.append({
 		"name":                    listing["name"],
@@ -338,7 +351,9 @@ func buy_plane(catalog_idx: int) -> void:
 	var entry: Dictionary = PLANE_CATALOG[catalog_idx]
 	if cash < float(entry["price"]):
 		return
-	cash -= float(entry["price"])
+	var ep := float(entry["price"])
+	cash        -= ep
+	total_spent += ep
 	cash_changed.emit()
 	planes.append({
 		"name": entry["name"],
@@ -374,7 +389,8 @@ func repair_plane(plane_idx: int) -> void:
 	var cost := repair_cost_for_plane(plane)
 	if cash < cost:
 		return
-	cash -= cost
+	cash        -= cost
+	total_spent += cost
 	cash_changed.emit()
 	var repair_time := damage * float(plane["repair_time_sec_per_pct"])
 	plane["repair_time_left"] = repair_time
@@ -389,6 +405,9 @@ func save_game() -> void:
 		"version": 1,
 		"timestamp": Time.get_unix_time_from_system(),
 		"cash": cash,
+		"total_earned": total_earned,
+		"total_spent":  total_spent,
+		"flight_log":   flight_log.duplicate(true),
 		"planes": planes.duplicate(true),
 		"routes": routes.duplicate(true),
 		"used_market": used_market.duplicate(true),
@@ -409,7 +428,11 @@ func load_game() -> void:
 	if not result is Dictionary:
 		return
 	var data: Dictionary = result
-	cash = float(data.get("cash", cash))
+	cash         = float(data.get("cash",         cash))
+	total_earned = float(data.get("total_earned", total_earned))
+	total_spent  = float(data.get("total_spent",  total_spent))
+	if data.has("flight_log"):
+		flight_log = data["flight_log"]
 	if data.has("planes"):
 		planes = data["planes"]
 	if data.has("routes"):
@@ -461,7 +484,9 @@ func _simulate_offline(elapsed: float) -> void:
 				route["status"] = "inactive"
 				route["flight_progress"] = 0.0
 				break
-			cash += float(route["ticket_price"]) * float(plane["seats"]) * float(route["occupancy_rate"])
+			var rev := float(route["ticket_price"]) * float(plane["seats"]) * float(route["occupancy_rate"])
+			cash         += rev
+			total_earned += rev
 			plane["condition"] = maxf(0.0, float(plane["condition"]) - float(plane["wear_per_flight"]))
 			plane["total_flights"] = int(plane["total_flights"]) + 1
 
