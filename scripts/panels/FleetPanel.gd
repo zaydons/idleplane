@@ -210,7 +210,7 @@ func _market_card(catalog_idx: int) -> Control:
 	right.alignment = BoxContainer.ALIGNMENT_CENTER
 	hbox.add_child(right)
 
-	right.add_child(_lbl(GameState.format_money(entry["price"]), C_GOLD, 11))
+	right.add_child(_lbl(GameState.format_money(entry["price"]), C_YELLOW, 11))
 
 	var can_afford := GameState.cash >= float(entry["price"])
 	var btn := _action_btn("Buy", C_GREEN if can_afford else C_DIM)
@@ -266,7 +266,7 @@ func _lbl(text: String, color: Color, size: int) -> Label:
 
 func _bar(pct: float, width: int = 14) -> String:
 	var n := int(round(pct / 100.0 * width))
-	var s := ""
+	var s := "["
 	for i in width:
-		s += "█" if i < n else "░"
-	return s
+		s += "=" if i < n else "-"
+	return s + "]"

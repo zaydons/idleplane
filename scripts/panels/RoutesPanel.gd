@@ -271,7 +271,7 @@ func _lbl(text: String, color: Color, size: int) -> Label:
 
 func _bar(pct: float, width: int = 14) -> String:
 	var n := int(round(pct / 100.0 * width))
-	var s := ""
+	var s := "["
 	for i in width:
-		s += "█" if i < n else "░"
-	return s
+		s += "=" if i < n else "-"
+	return s + "]"
