@@ -1,0 +1,28 @@
+; Godot Project Configuration File
+
+[configuration]
+
+config_version=5
+
+[application]
+
+config/name="IdlePlane"
+run/main_scene="res://scenes/Main.tscn"
+config/features=PackedStringArray("4.3", "GL Compatibility")
+boot_splash/show_image=false
+
+[autoload]
+
+GameState="*res://scripts/GameState.gd"
+
+[display]
+
+window/size/viewport_width=640
+window/size/viewport_height=360
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+textures/canvas_textures/default_texture_filter=0
