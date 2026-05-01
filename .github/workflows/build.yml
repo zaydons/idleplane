@@ -37,3 +37,25 @@ jobs:
           name: idleplane-web
           path: build/web/
           retention-days: 14
+
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/claude/airline-idle-game-5nnMl'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web/
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: web
+    if: github.ref == 'refs/heads/claude/airline-idle-game-5nnMl'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deploy
+        uses: actions/deploy-pages@v4
