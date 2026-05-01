@@ -26,7 +26,6 @@ func _ready() -> void:
 	scroll.add_child(_vbox)
 
 	GameState.assignment_changed.connect(refresh)
-	GameState.cash_changed.connect(refresh)
 	refresh()
 
 func refresh() -> void:
