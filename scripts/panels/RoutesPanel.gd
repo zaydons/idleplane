@@ -11,6 +11,8 @@ const C_RED    := Color("#d84838")
 
 var _vbox: VBoxContainer
 var _picker: Control = null
+# route_idx -> Label for live in-flight progress
+var _progress_labels: Dictionary = {}
 
 func _ready() -> void:
 	var scroll := ScrollContainer.new()
@@ -27,6 +29,7 @@ func _ready() -> void:
 	refresh()
 
 func refresh() -> void:
+	_progress_labels.clear()
 	for child in _vbox.get_children():
 		child.queue_free()
 	if _picker:
@@ -35,6 +38,21 @@ func refresh() -> void:
 	_vbox.add_child(_section_header("ROUTES"))
 	for i in GameState.routes.size():
 		_vbox.add_child(_route_card(i))
+
+func _process(_delta: float) -> void:
+	for route_idx in _progress_labels:
+		var lbl: Label = _progress_labels[route_idx]
+		if not is_instance_valid(lbl):
+			continue
+		var route: Dictionary = GameState.routes[route_idx]
+		if route["status"] != "active":
+			lbl.visible = false
+			continue
+		var pct := float(route["flight_progress"]) / float(route["flight_duration_sec"]) * 100.0
+		lbl.visible = true
+		lbl.text = "In flight  %s  %.0f%%" % [_bar(pct, 12), pct]
+
+# ── Card builder ──────────────────────────────────────────────────────────────
 
 func _section_header(title: String) -> Control:
 	var m := MarginContainer.new()
@@ -78,7 +96,7 @@ func _route_card(route_idx: int) -> Control:
 	vbox.add_child(_lbl("%d mi  |  Ticket: %s" % [route["distance_mi"], GameState.format_money(route["ticket_price"])], C_DIM, 10))
 	vbox.add_child(_sep())
 
-	# Aircraft row: label on the left, action button on the right
+	# Aircraft row
 	var hbox := HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 6)
 	vbox.add_child(hbox)
@@ -104,6 +122,15 @@ func _route_card(route_idx: int) -> Control:
 		btn.pressed.connect(func(): GameState.unassign_route(route_idx))
 		hbox.add_child(btn)
 
+	# Live progress bar (only visible when active)
+	var prog_lbl := _lbl("", C_ACCENT, 10)
+	prog_lbl.visible = (route["status"] == "active")
+	if route["status"] == "active":
+		var pct := float(route["flight_progress"]) / float(route["flight_duration_sec"]) * 100.0
+		prog_lbl.text = "In flight  %s  %.0f%%" % [_bar(pct, 12), pct]
+	_progress_labels[route_idx] = prog_lbl
+	vbox.add_child(prog_lbl)
+
 	return m
 
 # ── Picker overlay ────────────────────────────────────────────────────────────
@@ -117,7 +144,6 @@ func _show_picker(route_idx: int) -> void:
 	_picker.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_picker)
 
-	# Dim overlay — click outside card to dismiss
 	var overlay := ColorRect.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.color = Color(0.0, 0.02, 0.08, 0.82)
@@ -129,7 +155,6 @@ func _show_picker(route_idx: int) -> void:
 	)
 	_picker.add_child(overlay)
 
-	# Card centered via CenterContainer (sits on top of overlay)
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -141,10 +166,8 @@ func _show_picker(route_idx: int) -> void:
 	cs.bg_color = C_CARD
 	cs.border_color = C_ACCENT
 	cs.set_border_width_all(1)
-	cs.content_margin_left   = 10.0
-	cs.content_margin_right  = 10.0
-	cs.content_margin_top    = 8.0
-	cs.content_margin_bottom = 8.0
+	cs.content_margin_left = 10.0;  cs.content_margin_right  = 10.0
+	cs.content_margin_top  = 8.0;   cs.content_margin_bottom = 8.0
 	card.add_theme_stylebox_override("panel", cs)
 	center.add_child(card)
 
@@ -163,7 +186,7 @@ func _show_picker(route_idx: int) -> void:
 		if plane["status"] == "maintenance":
 			continue
 		any = true
-		var is_elsewhere := plane["assigned_route"] != -1 and plane["assigned_route"] != route_idx
+		var is_elsewhere := int(plane["assigned_route"]) != -1 and int(plane["assigned_route"]) != route_idx
 		var btn := Button.new()
 		btn.text = plane["name"] + ("  (reassign)" if is_elsewhere else "")
 		btn.flat = true
@@ -245,3 +268,10 @@ func _lbl(text: String, color: Color, size: int) -> Label:
 	l.add_theme_color_override("font_color", color)
 	l.add_theme_font_size_override("font_size", size)
 	return l
+
+func _bar(pct: float, width: int = 14) -> String:
+	var n := int(round(pct / 100.0 * width))
+	var s := ""
+	for i in width:
+		s += "█" if i < n else "░"
+	return s

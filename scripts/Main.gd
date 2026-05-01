@@ -24,6 +24,7 @@ var _cash_lbl: Label
 func _ready() -> void:
 	_build()
 	_switch_tab(0)
+	GameState.cash_changed.connect(_refresh_cash)
 
 func _build() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -130,9 +131,6 @@ func _switch_tab(idx: int) -> void:
 func _refresh_cash() -> void:
 	if _cash_lbl:
 		_cash_lbl.text = GameState.format_money(GameState.cash)
-
-func _process(_delta: float) -> void:
-	_refresh_cash()
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 

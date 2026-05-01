@@ -230,7 +230,7 @@ def _draw_finances(d, cy):
     row("Net",      "$0 / flight", C_DIM)
 
 
-out_dir = "/home/user/idleplane"
+out_dir = "/home/user/idleplane/mockups"
 
 # Unassigned state (original)
 for i, name in enumerate(["fleet", "routes", "finances"]):

@@ -10,6 +10,8 @@ const C_YELLOW := Color("#e8b830")
 const C_RED    := Color("#d84838")
 
 var _vbox: VBoxContainer
+# plane_idx -> Label that shows live flight progress
+var _progress_labels: Dictionary = {}
 
 func _ready() -> void:
 	var scroll := ScrollContainer.new()
@@ -23,14 +25,36 @@ func _ready() -> void:
 	scroll.add_child(_vbox)
 
 	GameState.assignment_changed.connect(refresh)
+	GameState.flight_completed.connect(_on_flight_completed)
+	refresh()
+
+func _on_flight_completed(_route_idx: int) -> void:
+	# Condition changed — rebuild cards so the bar reflects the new value.
 	refresh()
 
 func refresh() -> void:
+	_progress_labels.clear()
 	for child in _vbox.get_children():
 		child.queue_free()
 	_vbox.add_child(_section_header("FLEET"))
-	for plane in GameState.planes:
-		_vbox.add_child(_plane_card(plane))
+	for i in GameState.planes.size():
+		_vbox.add_child(_plane_card(i))
+
+func _process(_delta: float) -> void:
+	for plane_idx in _progress_labels:
+		var lbl: Label = _progress_labels[plane_idx]
+		if not is_instance_valid(lbl):
+			continue
+		var plane: Dictionary = GameState.planes[plane_idx]
+		if plane["status"] != "flying":
+			lbl.visible = false
+			continue
+		var route: Dictionary = GameState.routes[int(plane["assigned_route"])]
+		var pct := float(route["flight_progress"]) / float(route["flight_duration_sec"]) * 100.0
+		lbl.visible = true
+		lbl.text = "En route  %s  %.0f%%" % [_bar(pct, 12), pct]
+
+# ── Card builder ──────────────────────────────────────────────────────────────
 
 func _section_header(title: String) -> Control:
 	var m := MarginContainer.new()
@@ -44,7 +68,9 @@ func _section_header(title: String) -> Control:
 	m.add_child(l)
 	return m
 
-func _plane_card(plane: Dictionary) -> Control:
+func _plane_card(plane_idx: int) -> Control:
+	var plane: Dictionary = GameState.planes[plane_idx]
+
 	var m := MarginContainer.new()
 	m.add_theme_constant_override("margin_left",   8)
 	m.add_theme_constant_override("margin_right",  8)
@@ -69,17 +95,26 @@ func _plane_card(plane: Dictionary) -> Control:
 
 	vbox.add_child(_lbl(plane["name"], C_TEXT, 11))
 
-	# Status row — show assigned route when applicable
 	var status: String = plane["status"]
 	var route_suffix := ""
-	if status == "assigned":
-		var r: Dictionary = GameState.routes[plane["assigned_route"] as int]
+	if status == "flying":
+		var r: Dictionary = GameState.routes[int(plane["assigned_route"])]
 		route_suffix = "  (%s → %s)" % [r["origin"], r["destination"]]
-	var status_color := _status_color(status)
-	vbox.add_child(_lbl("Seats: %d  |  Status: %s%s" % [plane["seats"], status.capitalize(), route_suffix], status_color, 10))
+	vbox.add_child(_lbl("Seats: %d  |  %s%s" % [plane["seats"], status.capitalize(), route_suffix], _status_color(status), 10))
 
 	vbox.add_child(_sep())
 
+	# Live flight progress — shown only when flying, updated in _process
+	var prog_lbl := _lbl("", C_ACCENT, 10)
+	prog_lbl.visible = (status == "flying")
+	if status == "flying":
+		var route: Dictionary = GameState.routes[int(plane["assigned_route"])]
+		var pct := float(route["flight_progress"]) / float(route["flight_duration_sec"]) * 100.0
+		prog_lbl.text = "En route  %s  %.0f%%" % [_bar(pct, 12), pct]
+	_progress_labels[plane_idx] = prog_lbl
+	vbox.add_child(prog_lbl)
+
+	# Condition bar
 	var cond: float = plane["condition"]
 	var bar_color := C_GREEN if cond >= 80.0 else (C_YELLOW if cond >= 50.0 else C_RED)
 	vbox.add_child(_lbl("Condition  %s  %.0f%%" % [_bar(cond), cond], bar_color, 10))
@@ -92,10 +127,11 @@ func _plane_card(plane: Dictionary) -> Control:
 
 	return m
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
 func _status_color(status: String) -> Color:
 	match status:
-		"assigned":    return C_ACCENT
-		"flying":      return C_GREEN
+		"flying":      return C_ACCENT
 		"maintenance": return C_YELLOW
 	return C_DIM  # grounded
 
