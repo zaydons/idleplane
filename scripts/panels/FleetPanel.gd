@@ -119,6 +119,7 @@ func _plane_card(plane_idx: int) -> Control:
 		var r: Dictionary = GameState.routes[int(plane["assigned_route"])]
 		route_suffix = "  (%s → %s)" % [r["origin"], r["destination"]]
 	vbox.add_child(_lbl("Seats: %d  |  %s%s" % [plane["seats"], status.capitalize(), route_suffix], _status_color(status), 10))
+	vbox.add_child(_lbl("Total flights: %d" % int(plane["total_flights"]), C_DIM, 10))
 
 	vbox.add_child(_sep())
 
@@ -137,8 +138,7 @@ func _plane_card(plane_idx: int) -> Control:
 	var bar_color := C_GREEN if cond >= 80.0 else (C_YELLOW if cond >= 50.0 else C_RED)
 	vbox.add_child(_lbl("Condition  %s  %.0f%%" % [_bar(cond), cond], bar_color, 10))
 
-	var damage := 100.0 - cond
-	var cost   := damage * float(plane["repair_cost_per_pct"])
+	var cost := GameState.repair_cost_for_plane(plane)
 
 	if status == "maintenance":
 		# Live repair countdown — updated in _process

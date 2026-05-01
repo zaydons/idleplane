@@ -23,6 +23,7 @@ var planes: Array = [
 		"repair_time_sec_per_pct": 2.0,
 		"repair_time_left": 0.0,
 		"repair_total_time": 0.0,
+		"total_flights": 0,
 	}
 ]
 
@@ -95,6 +96,7 @@ func _complete_flight(route_idx: int) -> void:
 	cash += revenue
 	cash_changed.emit()
 	plane["condition"] = maxf(0.0, float(plane["condition"]) - float(plane["wear_per_flight"]))
+	plane["total_flights"] = int(plane["total_flights"]) + 1
 	flight_completed.emit(route_idx)
 
 # ── Assignment ────────────────────────────────────────────────────────────────
@@ -116,6 +118,13 @@ func assign_plane_to_route(plane_idx: int, route_idx: int) -> void:
 	routes[route_idx]["flight_progress"] = 0.0
 	assignment_changed.emit()
 
+static func repair_cost_for_plane(plane: Dictionary) -> float:
+	var damage := 100.0 - float(plane["condition"])
+	if damage <= 0.0:
+		return 0.0
+	var age_mult := 1.0 + int(plane["total_flights"]) * 0.005
+	return damage * float(plane["repair_cost_per_pct"]) * age_mult
+
 func repair_plane(plane_idx: int) -> void:
 	var plane: Dictionary = planes[plane_idx]
 	if plane["status"] != "grounded":
@@ -123,7 +132,7 @@ func repair_plane(plane_idx: int) -> void:
 	var damage := 100.0 - float(plane["condition"])
 	if damage <= 0.0:
 		return
-	var cost := damage * float(plane["repair_cost_per_pct"])
+	var cost := repair_cost_for_plane(plane)
 	if cash < cost:
 		return
 	cash -= cost
