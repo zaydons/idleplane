@@ -9,20 +9,28 @@ const C_GREEN  := Color("#38c870")
 const C_YELLOW := Color("#e8b830")
 const C_RED    := Color("#d84838")
 
+var _vbox: VBoxContainer
+
 func _ready() -> void:
 	var scroll := ScrollContainer.new()
 	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
 
-	var vbox := VBoxContainer.new()
-	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	vbox.add_theme_constant_override("separation", 4)
-	scroll.add_child(vbox)
+	_vbox = VBoxContainer.new()
+	_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_vbox.add_theme_constant_override("separation", 4)
+	scroll.add_child(_vbox)
 
-	vbox.add_child(_section_header("FLEET"))
+	GameState.assignment_changed.connect(refresh)
+	refresh()
+
+func refresh() -> void:
+	for child in _vbox.get_children():
+		child.queue_free()
+	_vbox.add_child(_section_header("FLEET"))
 	for plane in GameState.planes:
-		vbox.add_child(_plane_card(plane))
+		_vbox.add_child(_plane_card(plane))
 
 func _section_header(title: String) -> Control:
 	var m := MarginContainer.new()
@@ -59,32 +67,37 @@ func _plane_card(plane: Dictionary) -> Control:
 	vbox.add_theme_constant_override("separation", 3)
 	card.add_child(vbox)
 
-	# Name
-	var name_lbl := _lbl(plane["name"], C_TEXT, 11)
-	vbox.add_child(name_lbl)
+	vbox.add_child(_lbl(plane["name"], C_TEXT, 11))
 
-	# Seats / status on one row
+	# Status row — show assigned route when applicable
 	var status: String = plane["status"]
-	var status_color := C_DIM if status == "grounded" else (C_YELLOW if status == "maintenance" else C_GREEN)
-	vbox.add_child(_lbl("Seats: %d  |  Status: %s" % [plane["seats"], status.capitalize()], status_color, 10))
+	var route_suffix := ""
+	if status == "assigned":
+		var r: Dictionary = GameState.routes[plane["assigned_route"] as int]
+		route_suffix = "  (%s → %s)" % [r["origin"], r["destination"]]
+	var status_color := _status_color(status)
+	vbox.add_child(_lbl("Seats: %d  |  Status: %s%s" % [plane["seats"], status.capitalize(), route_suffix], status_color, 10))
 
 	vbox.add_child(_sep())
 
-	# Condition bar
 	var cond: float = plane["condition"]
 	var bar_color := C_GREEN if cond >= 80.0 else (C_YELLOW if cond >= 50.0 else C_RED)
 	vbox.add_child(_lbl("Condition  %s  %.0f%%" % [_bar(cond), cond], bar_color, 10))
 
-	# Repair cost
 	var cost := (100.0 - cond) * float(plane["repair_cost_per_pct"])
-	var repair_lbl: Label
 	if cond >= 100.0:
-		repair_lbl = _lbl("No repairs needed", C_DIM, 10)
+		vbox.add_child(_lbl("No repairs needed", C_DIM, 10))
 	else:
-		repair_lbl = _lbl("Repair to 100%%:  %s" % GameState.format_money(cost), C_YELLOW, 10)
-	vbox.add_child(repair_lbl)
+		vbox.add_child(_lbl("Repair to 100%%:  %s" % GameState.format_money(cost), C_YELLOW, 10))
 
 	return m
+
+func _status_color(status: String) -> Color:
+	match status:
+		"assigned":    return C_ACCENT
+		"flying":      return C_GREEN
+		"maintenance": return C_YELLOW
+	return C_DIM  # grounded
 
 func _sep() -> Control:
 	var sep := HSeparator.new()

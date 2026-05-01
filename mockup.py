@@ -58,10 +58,15 @@ def draw_tab(tab_index):
     cy = TOP_H
     d.rectangle([0, cy, W-1, cy + CONTENT_H - 1], fill=C_BG)
 
-    if tab_index == 0:
-        _draw_fleet(d, cy)
-    elif tab_index == 1:
-        _draw_routes(d, cy)
+    assigned = tab_index >= 3  # tabs 3+ show assigned state
+    real_idx = tab_index if tab_index < 3 else tab_index - 3
+    if real_idx == 0:
+        _draw_fleet(d, cy, assigned)
+    elif real_idx == 1:
+        if tab_index == 4:
+            _draw_routes_picker(d, cy)
+        else:
+            _draw_routes(d, cy, assigned)
     else:
         _draw_finances(d, cy)
 
@@ -99,12 +104,22 @@ def _card_bg(d, x0, y0, x1, y1):
     d.rectangle([x0, y0, x1, y1], outline=C_BORDER, width=1)
 
 
-def _draw_fleet(d, cy):
-    # Section header
+def _small_btn(d, x, y, label, color):
+    bbox = d.textbbox((0, 0), label, font=F10)
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    pad_x, pad_y = 6, 3
+    bx0, by0 = x, y - pad_y
+    bx1, by1 = x + tw + pad_x * 2, y + th + pad_y
+    bg = tuple(int(c * 0.15) for c in color[:3]) + (255,)
+    d.rectangle([bx0, by0, bx1, by1], fill=color[:3] + (38,))
+    d.rectangle([bx0, by0, bx1, by1], outline=color, width=1)
+    d.text((bx0 + pad_x, y), label, font=F10, fill=color)
+    return bx1  # right edge
+
+def _draw_fleet(d, cy, assigned=False):
     d.text((8, cy + 6), "FLEET", font=F12, fill=C_ACCENT)
     y = cy + 26
 
-    # Plane card
     cx0, cx1 = 8, W - 8
     card_h = 88
     _card_bg(d, cx0, y, cx1, y + card_h)
@@ -112,9 +127,10 @@ def _draw_fleet(d, cy):
     ix = cx0 + 8
 
     d.text((ix, iy), "Cessna 208 Caravan", font=F11, fill=C_TEXT); iy += 16
-    d.text((ix, iy), "Seats: 9  |  Status: Grounded",  font=F10, fill=C_DIM);  iy += 14
+    status_text = "Seats: 9  |  Status: Assigned (PHL → AVP)" if assigned else "Seats: 9  |  Status: Grounded"
+    status_color = C_ACCENT if assigned else C_DIM
+    d.text((ix, iy), status_text, font=F10, fill=status_color); iy += 14
 
-    # Separator
     d.line([ix, iy + 2, cx1 - 8, iy + 2], fill=C_BORDER); iy += 8
 
     cond_text = "Condition  %s  100%%" % bar(100)
@@ -122,12 +138,12 @@ def _draw_fleet(d, cy):
     d.text((ix, iy), "No repairs needed", font=F10, fill=C_DIM)
 
 
-def _draw_routes(d, cy):
+def _draw_routes(d, cy, assigned=False):
     d.text((8, cy + 6), "ROUTES", font=F12, fill=C_ACCENT)
     y = cy + 26
 
     cx0, cx1 = 8, W - 8
-    card_h = 88
+    card_h = 96
     _card_bg(d, cx0, y, cx1, y + card_h)
     iy = y + 6
     ix = cx0 + 8
@@ -138,7 +154,49 @@ def _draw_routes(d, cy):
 
     d.line([ix, iy + 2, cx1 - 8, iy + 2], fill=C_BORDER); iy += 8
 
-    d.text((ix, iy), "Aircraft: none assigned", font=F10, fill=C_YELLOW)
+    if assigned:
+        aircraft_text = "Aircraft: Cessna 208 Caravan"
+        d.text((ix, iy), aircraft_text, font=F10, fill=C_GREEN)
+        btn_x = cx1 - 8 - 72
+        _small_btn(d, btn_x, iy, "Unassign", C_RED)
+    else:
+        d.text((ix, iy), "Aircraft: none", font=F10, fill=C_YELLOW)
+        btn_x = cx1 - 8 - 56
+        _small_btn(d, btn_x, iy, "Assign", C_ACCENT)
+
+
+def _draw_routes_picker(d, cy):
+    """Routes tab with the assign picker open."""
+    _draw_routes(d, cy, assigned=False)
+    # Dim overlay
+    overlay = Image.new("RGBA", (W, CONTENT_H), (0, 5, 20, 210))
+    base = Image.new("RGB", (W, CONTENT_H))
+    base.paste(overlay, mask=overlay.split()[3])
+    # We'll just draw a darkened rectangle
+    d.rectangle([0, cy, W-1, cy + CONTENT_H - 1], fill=(2, 6, 16))
+    d.text((8, cy + 6), "ROUTES", font=F12, fill=C_ACCENT)
+    # Picker card
+    card_w, card_h = 240, 90
+    cx = (W - card_w) // 2
+    card_y = cy + (CONTENT_H - card_h) // 2
+    d.rectangle([cx, card_y, cx + card_w, card_y + card_h], fill=C_CARD)
+    d.rectangle([cx, card_y, cx + card_w, card_y + card_h], outline=C_ACCENT, width=1)
+    iy = card_y + 8
+    ix = cx + 10
+    # Title
+    title = "SELECT AIRCRAFT"
+    bbox = d.textbbox((0,0), title, font=F11)
+    tw = bbox[2] - bbox[0]
+    d.text((cx + (card_w - tw) // 2, iy), title, font=F11, fill=C_ACCENT); iy += 18
+    d.line([ix, iy, cx + card_w - 10, iy], fill=C_BORDER); iy += 8
+    # Plane option
+    d.text((ix, iy), "Cessna 208 Caravan", font=F10, fill=C_TEXT); iy += 18
+    d.line([ix, iy, cx + card_w - 10, iy], fill=C_BORDER); iy += 8
+    # Cancel
+    cancel = "Cancel"
+    bbox = d.textbbox((0,0), cancel, font=F10)
+    tw = bbox[2] - bbox[0]
+    d.text((cx + (card_w - tw) // 2, iy), cancel, font=F10, fill=C_DIM)
 
 
 def _draw_finances(d, cy):
@@ -172,19 +230,15 @@ def _draw_finances(d, cy):
     row("Net",      "$0 / flight", C_DIM)
 
 
-# Render all three tabs side by side in a wide strip + individual saves
-tabs = ["fleet", "routes", "finances"]
-images = [draw_tab(i) for i in range(3)]
-
-# Save individual tabs
 out_dir = "/home/user/idleplane"
-for i, name in enumerate(tabs):
-    images[i].save(f"{out_dir}/mockup_{name}.png")
 
-# Also save a 3-up comparison (3 × 640 wide)
-strip = Image.new("RGB", (W * 3, H), C_BG)
-for i, img in enumerate(images):
-    strip.paste(img, (i * W, 0))
-strip.save(f"{out_dir}/mockup_all.png")
+# Unassigned state (original)
+for i, name in enumerate(["fleet", "routes", "finances"]):
+    draw_tab(i).save(f"{out_dir}/mockup_{name}.png")
 
-print("Saved mockup_fleet.png, mockup_routes.png, mockup_finances.png, mockup_all.png")
+# Assigned state
+draw_tab(3).save(f"{out_dir}/mockup_fleet_assigned.png")
+draw_tab(4).save(f"{out_dir}/mockup_routes_picker.png")
+draw_tab(5).save(f"{out_dir}/mockup_routes_assigned.png")
+
+print("Done.")

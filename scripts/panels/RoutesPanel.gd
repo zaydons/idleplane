@@ -7,6 +7,10 @@ const C_DIM    := Color("#485870")
 const C_ACCENT := Color("#5090d8")
 const C_GREEN  := Color("#38c870")
 const C_YELLOW := Color("#e8b830")
+const C_RED    := Color("#d84838")
+
+var _vbox: VBoxContainer
+var _picker: Control = null
 
 func _ready() -> void:
 	var scroll := ScrollContainer.new()
@@ -14,14 +18,23 @@ func _ready() -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
 
-	var vbox := VBoxContainer.new()
-	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	vbox.add_theme_constant_override("separation", 4)
-	scroll.add_child(vbox)
+	_vbox = VBoxContainer.new()
+	_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_vbox.add_theme_constant_override("separation", 4)
+	scroll.add_child(_vbox)
 
-	vbox.add_child(_section_header("ROUTES"))
-	for route in GameState.routes:
-		vbox.add_child(_route_card(route))
+	GameState.assignment_changed.connect(refresh)
+	refresh()
+
+func refresh() -> void:
+	for child in _vbox.get_children():
+		child.queue_free()
+	if _picker:
+		_picker.queue_free()
+		_picker = null
+	_vbox.add_child(_section_header("ROUTES"))
+	for i in GameState.routes.size():
+		_vbox.add_child(_route_card(i))
 
 func _section_header(title: String) -> Control:
 	var m := MarginContainer.new()
@@ -35,7 +48,9 @@ func _section_header(title: String) -> Control:
 	m.add_child(l)
 	return m
 
-func _route_card(route: Dictionary) -> Control:
+func _route_card(route_idx: int) -> Control:
+	var route: Dictionary = GameState.routes[route_idx]
+
 	var m := MarginContainer.new()
 	m.add_theme_constant_override("margin_left",   8)
 	m.add_theme_constant_override("margin_right",  8)
@@ -58,25 +73,164 @@ func _route_card(route: Dictionary) -> Control:
 	vbox.add_theme_constant_override("separation", 3)
 	card.add_child(vbox)
 
-	# Route code header
 	vbox.add_child(_lbl("%s  →  %s" % [route["origin"], route["destination"]], C_TEXT, 12))
-
-	# City names
 	vbox.add_child(_lbl("%s → %s" % [route["origin_city"], route["destination_city"]], C_DIM, 10))
-
-	# Distance / ticket price
 	vbox.add_child(_lbl("%d mi  |  Ticket: %s" % [route["distance_mi"], GameState.format_money(route["ticket_price"])], C_DIM, 10))
+	vbox.add_child(_sep())
+
+	# Aircraft row: label on the left, action button on the right
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 6)
+	vbox.add_child(hbox)
+
+	var assigned: int = route["assigned_plane"]
+	var aircraft_lbl := Label.new()
+	aircraft_lbl.add_theme_font_size_override("font_size", 10)
+	aircraft_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	aircraft_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+
+	if assigned == -1:
+		aircraft_lbl.text = "Aircraft: none"
+		aircraft_lbl.add_theme_color_override("font_color", C_YELLOW)
+		hbox.add_child(aircraft_lbl)
+		var btn := _action_btn("Assign", C_ACCENT)
+		btn.pressed.connect(func(): _show_picker(route_idx))
+		hbox.add_child(btn)
+	else:
+		aircraft_lbl.text = "Aircraft: %s" % GameState.planes[assigned]["name"]
+		aircraft_lbl.add_theme_color_override("font_color", C_GREEN)
+		hbox.add_child(aircraft_lbl)
+		var btn := _action_btn("Unassign", C_RED)
+		btn.pressed.connect(func(): GameState.unassign_route(route_idx))
+		hbox.add_child(btn)
+
+	return m
+
+# ── Picker overlay ────────────────────────────────────────────────────────────
+
+func _show_picker(route_idx: int) -> void:
+	if _picker:
+		_picker.queue_free()
+
+	_picker = Control.new()
+	_picker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_picker.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_picker)
+
+	# Dim overlay — click outside card to dismiss
+	var overlay := ColorRect.new()
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.color = Color(0.0, 0.02, 0.08, 0.82)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed and _picker:
+			_picker.queue_free()
+			_picker = null
+	)
+	_picker.add_child(overlay)
+
+	# Card centered via CenterContainer (sits on top of overlay)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_PASS
+	_picker.add_child(center)
+
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(240, 0)
+	var cs := StyleBoxFlat.new()
+	cs.bg_color = C_CARD
+	cs.border_color = C_ACCENT
+	cs.set_border_width_all(1)
+	cs.content_margin_left   = 10.0
+	cs.content_margin_right  = 10.0
+	cs.content_margin_top    = 8.0
+	cs.content_margin_bottom = 8.0
+	card.add_theme_stylebox_override("panel", cs)
+	center.add_child(card)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 4)
+	card.add_child(vbox)
+
+	var title := _lbl("SELECT AIRCRAFT", C_ACCENT, 11)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+	vbox.add_child(_sep())
+
+	var any := false
+	for plane_idx in GameState.planes.size():
+		var plane: Dictionary = GameState.planes[plane_idx]
+		if plane["status"] == "maintenance":
+			continue
+		any = true
+		var is_elsewhere := plane["assigned_route"] != -1 and plane["assigned_route"] != route_idx
+		var btn := Button.new()
+		btn.text = plane["name"] + ("  (reassign)" if is_elsewhere else "")
+		btn.flat = true
+		btn.add_theme_font_size_override("font_size", 10)
+		btn.add_theme_color_override("font_color",         C_DIM if is_elsewhere else C_TEXT)
+		btn.add_theme_color_override("font_hover_color",   C_ACCENT)
+		btn.add_theme_color_override("font_pressed_color", C_ACCENT)
+		btn.add_theme_stylebox_override("normal",  _ghost_box())
+		btn.add_theme_stylebox_override("hover",   _ghost_box(Color(C_ACCENT.r, C_ACCENT.g, C_ACCENT.b, 0.15)))
+		btn.add_theme_stylebox_override("pressed", _ghost_box(Color(C_ACCENT.r, C_ACCENT.g, C_ACCENT.b, 0.15)))
+		var p_idx := plane_idx
+		btn.pressed.connect(func(): GameState.assign_plane_to_route(p_idx, route_idx))
+		vbox.add_child(btn)
+
+	if not any:
+		var none_lbl := _lbl("No aircraft available", C_DIM, 10)
+		none_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		vbox.add_child(none_lbl)
 
 	vbox.add_child(_sep())
 
-	# Aircraft assignment
-	var assigned: int = route["assigned_plane"]
-	if assigned == -1:
-		vbox.add_child(_lbl("Aircraft: none assigned", C_YELLOW, 10))
-	else:
-		vbox.add_child(_lbl("Aircraft: %s" % GameState.planes[assigned]["name"], C_GREEN, 10))
+	var cancel := Button.new()
+	cancel.text = "Cancel"
+	cancel.flat = true
+	cancel.add_theme_font_size_override("font_size", 10)
+	cancel.add_theme_color_override("font_color",       C_DIM)
+	cancel.add_theme_color_override("font_hover_color", C_TEXT)
+	cancel.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cancel.add_theme_stylebox_override("normal",  _ghost_box())
+	cancel.add_theme_stylebox_override("hover",   _ghost_box())
+	cancel.add_theme_stylebox_override("pressed", _ghost_box())
+	cancel.pressed.connect(func():
+		if _picker:
+			_picker.queue_free()
+		_picker = null
+	)
+	vbox.add_child(cancel)
 
-	return m
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+func _action_btn(label: String, color: Color) -> Button:
+	var btn := Button.new()
+	btn.text = label
+	btn.flat = false
+	btn.add_theme_font_size_override("font_size", 9)
+	btn.add_theme_color_override("font_color",         color)
+	btn.add_theme_color_override("font_hover_color",   color)
+	btn.add_theme_color_override("font_pressed_color", color)
+	var s := StyleBoxFlat.new()
+	s.bg_color = Color(color.r, color.g, color.b, 0.15)
+	s.border_color = color
+	s.set_border_width_all(1)
+	s.content_margin_left = 6.0;  s.content_margin_right  = 6.0
+	s.content_margin_top  = 2.0;  s.content_margin_bottom = 2.0
+	var sh := s.duplicate() as StyleBoxFlat
+	sh.bg_color = Color(color.r, color.g, color.b, 0.3)
+	btn.add_theme_stylebox_override("normal",  s)
+	btn.add_theme_stylebox_override("hover",   sh)
+	btn.add_theme_stylebox_override("pressed", s)
+	return btn
+
+func _ghost_box(bg := Color(0, 0, 0, 0)) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = bg
+	s.content_margin_left = 4.0;  s.content_margin_right  = 4.0
+	s.content_margin_top  = 3.0;  s.content_margin_bottom = 3.0
+	return s
 
 func _sep() -> Control:
 	var sep := HSeparator.new()
