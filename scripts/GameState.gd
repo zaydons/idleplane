@@ -8,49 +8,73 @@ signal used_market_changed
 
 const SAVE_PATH         := "user://save.json"
 const AUTOSAVE_INTERVAL := 30.0
-const USED_MARKET_SIZE  := 3
+const USED_MARKET_SIZE  := 10
 
 const PLANE_CATALOG: Array = [
 	{
 		"name": "Cessna 208 Caravan",
-		"seats": 9,
-		"price": 35000,
-		"wear_per_flight": 1.5,
-		"repair_cost_per_pct": 50.0,
-		"repair_time_sec_per_pct": 2.0,
+		"seats": 9, "price": 35000, "wear_per_flight": 1.5,
+		"repair_cost_per_pct": 50.0, "repair_time_sec_per_pct": 2.0,
 		"description": "Small regional prop",
 	},
 	{
 		"name": "Pilatus PC-12",
-		"seats": 9,
-		"price": 95000,
-		"wear_per_flight": 1.0,
-		"repair_cost_per_pct": 60.0,
-		"repair_time_sec_per_pct": 2.0,
+		"seats": 9, "price": 95000, "wear_per_flight": 1.0,
+		"repair_cost_per_pct": 60.0, "repair_time_sec_per_pct": 2.0,
 		"description": "Durable single-engine turboprop",
 	},
 	{
-		"name": "DHC-6 Twin Otter",
-		"seats": 19,
-		"price": 150000,
-		"wear_per_flight": 2.0,
-		"repair_cost_per_pct": 90.0,
-		"repair_time_sec_per_pct": 2.5,
-		"description": "19-seat STOL turboprop",
+		"name": "Beechcraft 1900D",
+		"seats": 19, "price": 175000, "wear_per_flight": 1.8,
+		"repair_cost_per_pct": 85.0, "repair_time_sec_per_pct": 2.5,
+		"description": "19-seat commuter turboprop",
 	},
 	{
-		"name": "Saab 340",
-		"seats": 34,
-		"price": 350000,
-		"wear_per_flight": 1.6,
-		"repair_cost_per_pct": 140.0,
-		"repair_time_sec_per_pct": 3.0,
+		"name": "DHC-6 Twin Otter",
+		"seats": 19, "price": 220000, "wear_per_flight": 1.6,
+		"repair_cost_per_pct": 90.0, "repair_time_sec_per_pct": 2.5,
+		"description": "Rugged 19-seat STOL turboprop",
+	},
+	{
+		"name": "Saab 340B",
+		"seats": 34, "price": 380000, "wear_per_flight": 1.5,
+		"repair_cost_per_pct": 130.0, "repair_time_sec_per_pct": 3.0,
 		"description": "34-seat regional turboprop",
+	},
+	{
+		"name": "ATR 42-600",
+		"seats": 48, "price": 600000, "wear_per_flight": 1.4,
+		"repair_cost_per_pct": 180.0, "repair_time_sec_per_pct": 3.5,
+		"description": "48-seat modern turboprop",
+	},
+	{
+		"name": "Embraer ERJ-145",
+		"seats": 50, "price": 850000, "wear_per_flight": 1.3,
+		"repair_cost_per_pct": 220.0, "repair_time_sec_per_pct": 4.0,
+		"description": "50-seat regional jet",
+	},
+	{
+		"name": "Bombardier Q400",
+		"seats": 78, "price": 1200000, "wear_per_flight": 1.4,
+		"repair_cost_per_pct": 280.0, "repair_time_sec_per_pct": 4.0,
+		"description": "78-seat high-speed turboprop",
+	},
+	{
+		"name": "Boeing 737-700",
+		"seats": 128, "price": 3500000, "wear_per_flight": 1.2,
+		"repair_cost_per_pct": 600.0, "repair_time_sec_per_pct": 5.0,
+		"description": "128-seat narrowbody jet",
+	},
+	{
+		"name": "Airbus A320neo",
+		"seats": 165, "price": 6000000, "wear_per_flight": 1.1,
+		"repair_cost_per_pct": 900.0, "repair_time_sec_per_pct": 6.0,
+		"description": "165-seat fuel-efficient jet",
 	},
 ]
 
 var airline_name := "Sky Haven Airways"
-var cash         := 25000.0
+var cash         := 75000.0
 var time_scale   := 1.0
 
 var planes: Array = [
@@ -270,7 +294,10 @@ func unlock_route(route_idx: int) -> void:
 # ── Purchase ──────────────────────────────────────────────────────────────────
 
 func _gen_used_listing() -> Dictionary:
-	var entry: Dictionary = PLANE_CATALOG[_rng.randi_range(0, PLANE_CATALOG.size() - 1)]
+	# Weight toward cheaper planes: pick the lower of two random indices
+	var a := _rng.randi_range(0, PLANE_CATALOG.size() - 1)
+	var b := _rng.randi_range(0, PLANE_CATALOG.size() - 1)
+	var entry: Dictionary = PLANE_CATALOG[mini(a, b)]
 	var condition := _rng.randf_range(50.0, 75.0)
 	var price     := float(entry["price"]) * (condition / 100.0) * 0.75
 	return {
