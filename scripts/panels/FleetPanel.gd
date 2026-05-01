@@ -43,6 +43,9 @@ func refresh() -> void:
 	_vbox.add_child(_section_header("FLEET"))
 	for i in GameState.planes.size():
 		_vbox.add_child(_plane_card(i))
+	_vbox.add_child(_section_header("BUY AIRCRAFT"))
+	for i in GameState.PLANE_CATALOG.size():
+		_vbox.add_child(_market_card(i))
 
 func _process(_delta: float) -> void:
 	for plane_idx in _progress_labels:
@@ -163,6 +166,58 @@ func _plane_card(plane_idx: int) -> Control:
 		var p_idx := plane_idx
 		btn.pressed.connect(func(): GameState.repair_plane(p_idx))
 		hbox.add_child(btn)
+
+	return m
+
+func _market_card(catalog_idx: int) -> Control:
+	var entry: Dictionary = GameState.PLANE_CATALOG[catalog_idx]
+
+	var m := MarginContainer.new()
+	m.add_theme_constant_override("margin_left",   8)
+	m.add_theme_constant_override("margin_right",  8)
+	m.add_theme_constant_override("margin_top",    2)
+	m.add_theme_constant_override("margin_bottom", 2)
+
+	var card := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = C_CARD
+	style.border_color = C_BORDER
+	style.set_border_width_all(1)
+	style.content_margin_left   = 8.0
+	style.content_margin_right  = 8.0
+	style.content_margin_top    = 6.0
+	style.content_margin_bottom = 6.0
+	card.add_theme_stylebox_override("panel", style)
+	m.add_child(card)
+
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 6)
+	card.add_child(hbox)
+
+	# Info column
+	var info := VBoxContainer.new()
+	info.add_theme_constant_override("separation", 2)
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(info)
+
+	info.add_child(_lbl(entry["name"], C_TEXT, 11))
+	info.add_child(_lbl("%d seats  |  Wear: %.1f%%/flight" % [entry["seats"], entry["wear_per_flight"]], C_DIM, 10))
+	info.add_child(_lbl(entry["description"], C_DIM, 10))
+
+	# Price + buy button column
+	var right := VBoxContainer.new()
+	right.add_theme_constant_override("separation", 4)
+	right.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.add_child(right)
+
+	right.add_child(_lbl(GameState.format_money(entry["price"]), C_GOLD, 11))
+
+	var can_afford := GameState.cash >= float(entry["price"])
+	var btn := _action_btn("Buy", C_GREEN if can_afford else C_DIM)
+	btn.disabled = not can_afford
+	var idx := catalog_idx
+	btn.pressed.connect(func(): GameState.buy_plane(idx))
+	right.add_child(btn)
 
 	return m
 

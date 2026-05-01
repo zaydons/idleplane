@@ -5,11 +5,51 @@ signal flight_completed(route_idx: int)
 signal repair_completed(plane_idx: int)
 signal cash_changed
 
-const SAVE_PATH           := "user://save.json"
-const AUTOSAVE_INTERVAL   := 30.0
+const SAVE_PATH         := "user://save.json"
+const AUTOSAVE_INTERVAL := 30.0
+
+const PLANE_CATALOG: Array = [
+	{
+		"name": "Cessna 208 Caravan",
+		"seats": 9,
+		"price": 35000,
+		"wear_per_flight": 1.5,
+		"repair_cost_per_pct": 50.0,
+		"repair_time_sec_per_pct": 2.0,
+		"description": "Small regional prop",
+	},
+	{
+		"name": "Pilatus PC-12",
+		"seats": 9,
+		"price": 95000,
+		"wear_per_flight": 1.0,
+		"repair_cost_per_pct": 60.0,
+		"repair_time_sec_per_pct": 2.0,
+		"description": "Durable single-engine turboprop",
+	},
+	{
+		"name": "DHC-6 Twin Otter",
+		"seats": 19,
+		"price": 150000,
+		"wear_per_flight": 2.0,
+		"repair_cost_per_pct": 90.0,
+		"repair_time_sec_per_pct": 2.5,
+		"description": "19-seat STOL turboprop",
+	},
+	{
+		"name": "Saab 340",
+		"seats": 34,
+		"price": 350000,
+		"wear_per_flight": 1.6,
+		"repair_cost_per_pct": 140.0,
+		"repair_time_sec_per_pct": 3.0,
+		"description": "34-seat regional turboprop",
+	},
+]
 
 var airline_name := "Sky Haven Airways"
 var cash         := 25000.0
+var time_scale   := 1.0
 
 var planes: Array = [
 	{
@@ -43,22 +83,33 @@ var routes: Array = [
 	}
 ]
 
-var _autosave_timer := 0.0
+var _autosave_timer  := 0.0
+var _window_focused  := true
 
 func _ready() -> void:
+	get_tree().root.focus_entered.connect(func(): _window_focused = true)
+	get_tree().root.focus_exited.connect(func(): _window_focused = false)
 	load_game()
 
 func _process(delta: float) -> void:
-	_tick(delta)
-	_autosave_timer += delta
+	var effective := delta * (time_scale if _window_focused else 1.0)
+	_tick(effective)
+	_autosave_timer += delta          # autosave on real time
 	if _autosave_timer >= AUTOSAVE_INTERVAL:
 		_autosave_timer = 0.0
 		save_game()
 
+# ── Speed ─────────────────────────────────────────────────────────────────────
+
+func cycle_speed() -> void:
+	match time_scale:
+		1.0: time_scale = 2.0
+		2.0: time_scale = 5.0
+		_:   time_scale = 1.0
+
 # ── Flight loop ───────────────────────────────────────────────────────────────
 
 func _tick(delta: float) -> void:
-	# Repair countdowns
 	for i in planes.size():
 		var plane: Dictionary = planes[i]
 		if plane["status"] != "maintenance":
@@ -71,7 +122,6 @@ func _tick(delta: float) -> void:
 			plane["status"] = "grounded"
 			repair_completed.emit(i)
 
-	# Flight ticks
 	for i in routes.size():
 		var route: Dictionary = routes[i]
 		if route["status"] != "active":
@@ -80,7 +130,6 @@ func _tick(delta: float) -> void:
 		var plane: Dictionary = planes[plane_idx]
 		if float(plane["condition"]) <= 0.0:
 			unassign_route(i)
-			# plane is grounded (not maintenance) — player initiates repair manually
 			continue
 		route["flight_progress"] = float(route["flight_progress"]) + delta
 		while float(route["flight_progress"]) >= float(route["flight_duration_sec"]):
@@ -118,6 +167,42 @@ func assign_plane_to_route(plane_idx: int, route_idx: int) -> void:
 	routes[route_idx]["flight_progress"] = 0.0
 	assignment_changed.emit()
 
+func unassign_route(route_idx: int) -> void:
+	var plane_idx: int = routes[route_idx]["assigned_plane"]
+	if plane_idx == -1:
+		return
+	planes[plane_idx]["status"] = "grounded"
+	planes[plane_idx]["assigned_route"] = -1
+	routes[route_idx]["assigned_plane"] = -1
+	routes[route_idx]["status"] = "inactive"
+	routes[route_idx]["flight_progress"] = 0.0
+	assignment_changed.emit()
+
+# ── Purchase ──────────────────────────────────────────────────────────────────
+
+func buy_plane(catalog_idx: int) -> void:
+	var entry: Dictionary = PLANE_CATALOG[catalog_idx]
+	if cash < float(entry["price"]):
+		return
+	cash -= float(entry["price"])
+	cash_changed.emit()
+	planes.append({
+		"name": entry["name"],
+		"seats": entry["seats"],
+		"condition": 100.0,
+		"status": "grounded",
+		"assigned_route": -1,
+		"wear_per_flight": entry["wear_per_flight"],
+		"repair_cost_per_pct": entry["repair_cost_per_pct"],
+		"repair_time_sec_per_pct": entry["repair_time_sec_per_pct"],
+		"repair_time_left": 0.0,
+		"repair_total_time": 0.0,
+		"total_flights": 0,
+	})
+	assignment_changed.emit()
+
+# ── Repair ────────────────────────────────────────────────────────────────────
+
 static func repair_cost_for_plane(plane: Dictionary) -> float:
 	var damage := 100.0 - float(plane["condition"])
 	if damage <= 0.0:
@@ -141,17 +226,6 @@ func repair_plane(plane_idx: int) -> void:
 	plane["repair_time_left"] = repair_time
 	plane["repair_total_time"] = repair_time
 	plane["status"] = "maintenance"
-	assignment_changed.emit()
-
-func unassign_route(route_idx: int) -> void:
-	var plane_idx: int = routes[route_idx]["assigned_plane"]
-	if plane_idx == -1:
-		return
-	planes[plane_idx]["status"] = "grounded"
-	planes[plane_idx]["assigned_route"] = -1
-	routes[route_idx]["assigned_plane"] = -1
-	routes[route_idx]["status"] = "inactive"
-	routes[route_idx]["flight_progress"] = 0.0
 	assignment_changed.emit()
 
 # ── Save / Load ───────────────────────────────────────────────────────────────
@@ -190,7 +264,6 @@ func load_game() -> void:
 		_simulate_offline(elapsed)
 
 func _simulate_offline(elapsed: float) -> void:
-	# Advance any in-progress repairs
 	for i in planes.size():
 		var plane: Dictionary = planes[i]
 		if plane["status"] != "maintenance":
@@ -209,13 +282,13 @@ func _simulate_offline(elapsed: float) -> void:
 		if plane_idx == -1:
 			continue
 		var plane: Dictionary = planes[plane_idx]
-		var total   := float(route["flight_progress"]) + elapsed
-		var dur     := float(route["flight_duration_sec"])
+		var total     := float(route["flight_progress"]) + elapsed
+		var dur       := float(route["flight_duration_sec"])
 		var n_flights := int(total / dur)
 		route["flight_progress"] = fmod(total, dur)
 		for _j in n_flights:
 			if float(plane["condition"]) <= 0.0:
-				plane["status"] = "maintenance"
+				plane["status"] = "grounded"
 				plane["assigned_route"] = -1
 				route["assigned_plane"] = -1
 				route["status"] = "inactive"
@@ -223,6 +296,7 @@ func _simulate_offline(elapsed: float) -> void:
 				break
 			cash += float(route["ticket_price"]) * float(plane["seats"]) * float(route["occupancy_rate"])
 			plane["condition"] = maxf(0.0, float(plane["condition"]) - float(plane["wear_per_flight"]))
+			plane["total_flights"] = int(plane["total_flights"]) + 1
 
 # ── Util ──────────────────────────────────────────────────────────────────────
 

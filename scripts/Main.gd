@@ -20,6 +20,7 @@ const C_GOLD    := Color("#e8b830")
 var _panels := []
 var _tab_btns := []
 var _cash_lbl: Label
+var _speed_btn: Button
 
 func _ready() -> void:
 	_build()
@@ -63,9 +64,35 @@ func _make_top_bar() -> Control:
 	_cash_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hbox.add_child(_cash_lbl)
 
+	_spacer(hbox, 6)
+
+	_speed_btn = Button.new()
+	_speed_btn.text = "1×"
+	_speed_btn.flat = true
+	_speed_btn.add_theme_font_size_override("font_size", 10)
+	_speed_btn.add_theme_color_override("font_color", C_DIM)
+	_speed_btn.add_theme_color_override("font_hover_color", C_TEXT)
+	_speed_btn.add_theme_color_override("font_pressed_color", C_TEXT)
+	var sp_s := StyleBoxFlat.new()
+	sp_s.bg_color = Color(0, 0, 0, 0)
+	sp_s.content_margin_left = 4.0; sp_s.content_margin_right  = 4.0
+	sp_s.content_margin_top  = 0.0; sp_s.content_margin_bottom = 0.0
+	_speed_btn.add_theme_stylebox_override("normal",  sp_s)
+	_speed_btn.add_theme_stylebox_override("hover",   sp_s)
+	_speed_btn.add_theme_stylebox_override("pressed", sp_s)
+	_speed_btn.pressed.connect(_on_speed_pressed)
+	hbox.add_child(_speed_btn)
+
 	_spacer(hbox, 8)
 	_refresh_cash()
 	return bar
+
+func _on_speed_pressed() -> void:
+	GameState.cycle_speed()
+	var spd := int(GameState.time_scale)
+	_speed_btn.text = "%d×" % spd
+	var color := C_ACCENT if spd > 1 else C_DIM
+	_speed_btn.add_theme_color_override("font_color", color)
 
 func _make_content() -> Control:
 	var c := Control.new()
