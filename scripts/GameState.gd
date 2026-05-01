@@ -4,9 +4,11 @@ signal assignment_changed
 signal flight_completed(route_idx: int)
 signal repair_completed(plane_idx: int)
 signal cash_changed
+signal used_market_changed
 
 const SAVE_PATH         := "user://save.json"
 const AUTOSAVE_INTERVAL := 30.0
+const USED_MARKET_SIZE  := 3
 
 const PLANE_CATALOG: Array = [
 	{
@@ -150,13 +152,19 @@ var routes: Array = [
 	},
 ]
 
+var used_market: Array = []
+
 var _autosave_timer  := 0.0
 var _window_focused  := true
+var _rng             := RandomNumberGenerator.new()
 
 func _ready() -> void:
+	_rng.randomize()
 	get_tree().root.focus_entered.connect(func(): _window_focused = true)
 	get_tree().root.focus_exited.connect(func(): _window_focused = false)
 	load_game()
+	while used_market.size() < USED_MARKET_SIZE:
+		used_market.append(_gen_used_listing())
 
 func _process(delta: float) -> void:
 	var effective := delta * (time_scale if _window_focused else 1.0)
@@ -261,6 +269,44 @@ func unlock_route(route_idx: int) -> void:
 
 # ── Purchase ──────────────────────────────────────────────────────────────────
 
+func _gen_used_listing() -> Dictionary:
+	var entry: Dictionary = PLANE_CATALOG[_rng.randi_range(0, PLANE_CATALOG.size() - 1)]
+	var condition := _rng.randf_range(50.0, 75.0)
+	var price     := float(entry["price"]) * (condition / 100.0) * 0.75
+	return {
+		"name":                    entry["name"],
+		"seats":                   entry["seats"],
+		"condition":               condition,
+		"price":                   price,
+		"wear_per_flight":         entry["wear_per_flight"],
+		"repair_cost_per_pct":     entry["repair_cost_per_pct"],
+		"repair_time_sec_per_pct": entry["repair_time_sec_per_pct"],
+		"description":             entry["description"],
+	}
+
+func buy_used_plane(market_idx: int) -> void:
+	var listing: Dictionary = used_market[market_idx]
+	if cash < float(listing["price"]):
+		return
+	cash -= float(listing["price"])
+	cash_changed.emit()
+	planes.append({
+		"name":                    listing["name"],
+		"seats":                   listing["seats"],
+		"condition":               listing["condition"],
+		"status":                  "grounded",
+		"assigned_route":          -1,
+		"wear_per_flight":         listing["wear_per_flight"],
+		"repair_cost_per_pct":     listing["repair_cost_per_pct"],
+		"repair_time_sec_per_pct": listing["repair_time_sec_per_pct"],
+		"repair_time_left":        0.0,
+		"repair_total_time":       0.0,
+		"total_flights":           0,
+	})
+	used_market[market_idx] = _gen_used_listing()
+	used_market_changed.emit()
+	assignment_changed.emit()
+
 func buy_plane(catalog_idx: int) -> void:
 	var entry: Dictionary = PLANE_CATALOG[catalog_idx]
 	if cash < float(entry["price"]):
@@ -318,6 +364,7 @@ func save_game() -> void:
 		"cash": cash,
 		"planes": planes.duplicate(true),
 		"routes": routes.duplicate(true),
+		"used_market": used_market.duplicate(true),
 	}
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f:
@@ -350,6 +397,8 @@ func load_game() -> void:
 					route["status"]          = saved_route.get("status", "inactive")
 					route["flight_progress"] = saved_route.get("flight_progress", 0.0)
 					break
+	if data.has("used_market"):
+		used_market = data["used_market"]
 	var elapsed := Time.get_unix_time_from_system() - float(data.get("timestamp", Time.get_unix_time_from_system()))
 	if elapsed > 0.0:
 		_simulate_offline(elapsed)

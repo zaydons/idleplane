@@ -27,6 +27,8 @@ func _ready() -> void:
 	GameState.assignment_changed.connect(refresh)
 	GameState.flight_completed.connect(_on_flight_completed)
 	GameState.repair_completed.connect(_on_repair_completed)
+	GameState.used_market_changed.connect(refresh)
+	GameState.cash_changed.connect(refresh)
 	refresh()
 
 func _on_flight_completed(_route_idx: int) -> void:
@@ -49,6 +51,9 @@ func refresh() -> void:
 	_vbox.add_child(_section_header("BUY AIRCRAFT"))
 	for i in GameState.PLANE_CATALOG.size():
 		_vbox.add_child(_market_card(i))
+	_vbox.add_child(_section_header("USED AIRCRAFT"))
+	for i in GameState.used_market.size():
+		_vbox.add_child(_used_card(i))
 
 func _process(_delta: float) -> void:
 	for plane_idx in _progress_labels:
@@ -220,6 +225,58 @@ func _market_card(catalog_idx: int) -> Control:
 	btn.disabled = not can_afford
 	var idx := catalog_idx
 	btn.pressed.connect(func(): GameState.buy_plane(idx))
+	right.add_child(btn)
+
+	return m
+
+func _used_card(market_idx: int) -> Control:
+	var listing: Dictionary = GameState.used_market[market_idx]
+
+	var m := MarginContainer.new()
+	m.add_theme_constant_override("margin_left",   8)
+	m.add_theme_constant_override("margin_right",  8)
+	m.add_theme_constant_override("margin_top",    2)
+	m.add_theme_constant_override("margin_bottom", 2)
+
+	var card := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = C_CARD
+	style.border_color = C_BORDER
+	style.set_border_width_all(1)
+	style.content_margin_left   = 8.0
+	style.content_margin_right  = 8.0
+	style.content_margin_top    = 6.0
+	style.content_margin_bottom = 6.0
+	card.add_theme_stylebox_override("panel", style)
+	m.add_child(card)
+
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 6)
+	card.add_child(hbox)
+
+	var info := VBoxContainer.new()
+	info.add_theme_constant_override("separation", 2)
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(info)
+
+	info.add_child(_lbl(listing["name"], C_TEXT, 11))
+	info.add_child(_lbl("%d seats  |  Wear: %.1f%%/flight" % [listing["seats"], listing["wear_per_flight"]], C_DIM, 10))
+	var cond: float = float(listing["condition"])
+	var bar_color := C_GREEN if cond >= 80.0 else (C_YELLOW if cond >= 50.0 else C_RED)
+	info.add_child(_lbl("Condition  %s  %.0f%%" % [_bar(cond, 10), cond], bar_color, 10))
+
+	var right := VBoxContainer.new()
+	right.add_theme_constant_override("separation", 4)
+	right.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.add_child(right)
+
+	right.add_child(_lbl(GameState.format_money(listing["price"]), C_YELLOW, 11))
+
+	var can_afford := GameState.cash >= float(listing["price"])
+	var btn := _action_btn("Buy", C_GREEN if can_afford else C_DIM)
+	btn.disabled = not can_afford
+	var idx := market_idx
+	btn.pressed.connect(func(): GameState.buy_used_plane(idx))
 	right.add_child(btn)
 
 	return m
