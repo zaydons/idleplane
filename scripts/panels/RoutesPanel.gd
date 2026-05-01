@@ -183,7 +183,7 @@ func _show_picker(route_idx: int) -> void:
 	var any := false
 	for plane_idx in GameState.planes.size():
 		var plane: Dictionary = GameState.planes[plane_idx]
-		if plane["status"] == "maintenance":
+		if plane["status"] == "maintenance" or float(plane["condition"]) <= 0.0:
 			continue
 		any = true
 		var is_elsewhere := int(plane["assigned_route"]) != -1 and int(plane["assigned_route"]) != route_idx

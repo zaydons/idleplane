@@ -2,6 +2,7 @@ extends Node
 
 signal assignment_changed
 signal flight_completed(route_idx: int)
+signal repair_completed(plane_idx: int)
 signal cash_changed
 
 const SAVE_PATH           := "user://save.json"
@@ -17,8 +18,11 @@ var planes: Array = [
 		"condition": 100.0,
 		"status": "grounded",       # grounded | flying | maintenance
 		"assigned_route": -1,
-		"wear_per_flight": 2.5,
+		"wear_per_flight": 1.5,
 		"repair_cost_per_pct": 50.0,
+		"repair_time_sec_per_pct": 2.0,
+		"repair_time_left": 0.0,
+		"repair_total_time": 0.0,
 	}
 ]
 
@@ -53,16 +57,29 @@ func _process(delta: float) -> void:
 # ── Flight loop ───────────────────────────────────────────────────────────────
 
 func _tick(delta: float) -> void:
+	# Repair countdowns
+	for i in planes.size():
+		var plane: Dictionary = planes[i]
+		if plane["status"] != "maintenance":
+			continue
+		plane["repair_time_left"] = float(plane["repair_time_left"]) - delta
+		if float(plane["repair_time_left"]) <= 0.0:
+			plane["repair_time_left"] = 0.0
+			plane["repair_total_time"] = 0.0
+			plane["condition"] = 100.0
+			plane["status"] = "grounded"
+			repair_completed.emit(i)
+
+	# Flight ticks
 	for i in routes.size():
 		var route: Dictionary = routes[i]
 		if route["status"] != "active":
 			continue
 		var plane_idx: int = route["assigned_plane"]
 		var plane: Dictionary = planes[plane_idx]
-		if plane["condition"] <= 0.0:
+		if float(plane["condition"]) <= 0.0:
 			unassign_route(i)
-			plane["status"] = "maintenance"
-			assignment_changed.emit()
+			# plane is grounded (not maintenance) — player initiates repair manually
 			continue
 		route["flight_progress"] = float(route["flight_progress"]) + delta
 		while float(route["flight_progress"]) >= float(route["flight_duration_sec"]):
@@ -97,6 +114,24 @@ func assign_plane_to_route(plane_idx: int, route_idx: int) -> void:
 	routes[route_idx]["assigned_plane"] = plane_idx
 	routes[route_idx]["status"] = "active"
 	routes[route_idx]["flight_progress"] = 0.0
+	assignment_changed.emit()
+
+func repair_plane(plane_idx: int) -> void:
+	var plane: Dictionary = planes[plane_idx]
+	if plane["status"] != "grounded":
+		return
+	var damage := 100.0 - float(plane["condition"])
+	if damage <= 0.0:
+		return
+	var cost := damage * float(plane["repair_cost_per_pct"])
+	if cash < cost:
+		return
+	cash -= cost
+	cash_changed.emit()
+	var repair_time := damage * float(plane["repair_time_sec_per_pct"])
+	plane["repair_time_left"] = repair_time
+	plane["repair_total_time"] = repair_time
+	plane["status"] = "maintenance"
 	assignment_changed.emit()
 
 func unassign_route(route_idx: int) -> void:
@@ -146,6 +181,17 @@ func load_game() -> void:
 		_simulate_offline(elapsed)
 
 func _simulate_offline(elapsed: float) -> void:
+	# Advance any in-progress repairs
+	for i in planes.size():
+		var plane: Dictionary = planes[i]
+		if plane["status"] != "maintenance":
+			continue
+		plane["repair_time_left"] = maxf(0.0, float(plane["repair_time_left"]) - elapsed)
+		if float(plane["repair_time_left"]) <= 0.0:
+			plane["repair_total_time"] = 0.0
+			plane["condition"] = 100.0
+			plane["status"] = "grounded"
+
 	for i in routes.size():
 		var route: Dictionary = routes[i]
 		if route["status"] != "active":

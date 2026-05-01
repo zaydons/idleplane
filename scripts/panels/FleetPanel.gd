@@ -10,8 +10,8 @@ const C_YELLOW := Color("#e8b830")
 const C_RED    := Color("#d84838")
 
 var _vbox: VBoxContainer
-# plane_idx -> Label that shows live flight progress
-var _progress_labels: Dictionary = {}
+var _progress_labels: Dictionary = {}  # plane_idx -> en-route Label
+var _repair_labels: Dictionary = {}    # plane_idx -> repair progress Label
 
 func _ready() -> void:
 	var scroll := ScrollContainer.new()
@@ -26,14 +26,18 @@ func _ready() -> void:
 
 	GameState.assignment_changed.connect(refresh)
 	GameState.flight_completed.connect(_on_flight_completed)
+	GameState.repair_completed.connect(_on_repair_completed)
 	refresh()
 
 func _on_flight_completed(_route_idx: int) -> void:
-	# Condition changed — rebuild cards so the bar reflects the new value.
+	refresh()
+
+func _on_repair_completed(_plane_idx: int) -> void:
 	refresh()
 
 func refresh() -> void:
 	_progress_labels.clear()
+	_repair_labels.clear()
 	for child in _vbox.get_children():
 		child.queue_free()
 	_vbox.add_child(_section_header("FLEET"))
@@ -53,6 +57,20 @@ func _process(_delta: float) -> void:
 		var pct := float(route["flight_progress"]) / float(route["flight_duration_sec"]) * 100.0
 		lbl.visible = true
 		lbl.text = "En route  %s  %.0f%%" % [_bar(pct, 12), pct]
+
+	for plane_idx in _repair_labels:
+		var lbl: Label = _repair_labels[plane_idx]
+		if not is_instance_valid(lbl):
+			continue
+		var plane: Dictionary = GameState.planes[plane_idx]
+		if plane["status"] != "maintenance":
+			lbl.visible = false
+			continue
+		var total: float = float(plane["repair_total_time"])
+		var left: float  = float(plane["repair_time_left"])
+		var pct := (1.0 - left / total) * 100.0 if total > 0.0 else 100.0
+		lbl.visible = true
+		lbl.text = "Repairing  %s  %.0f%%  (%ds left)" % [_bar(pct, 10), pct, int(left)]
 
 # ── Card builder ──────────────────────────────────────────────────────────────
 
@@ -115,19 +133,61 @@ func _plane_card(plane_idx: int) -> Control:
 	vbox.add_child(prog_lbl)
 
 	# Condition bar
-	var cond: float = plane["condition"]
+	var cond: float = float(plane["condition"])
 	var bar_color := C_GREEN if cond >= 80.0 else (C_YELLOW if cond >= 50.0 else C_RED)
 	vbox.add_child(_lbl("Condition  %s  %.0f%%" % [_bar(cond), cond], bar_color, 10))
 
-	var cost := (100.0 - cond) * float(plane["repair_cost_per_pct"])
-	if cond >= 100.0:
+	var damage := 100.0 - cond
+	var cost   := damage * float(plane["repair_cost_per_pct"])
+
+	if status == "maintenance":
+		# Live repair countdown — updated in _process
+		var rep_lbl := _lbl("", C_YELLOW, 10)
+		_repair_labels[plane_idx] = rep_lbl
+		vbox.add_child(rep_lbl)
+	elif cond >= 100.0:
 		vbox.add_child(_lbl("No repairs needed", C_DIM, 10))
 	else:
-		vbox.add_child(_lbl("Repair to 100%%:  %s" % GameState.format_money(cost), C_YELLOW, 10))
+		# Repair button row
+		var hbox := HBoxContainer.new()
+		hbox.add_theme_constant_override("separation", 6)
+		vbox.add_child(hbox)
+
+		var cost_lbl := _lbl("Repair to 100%%:  %s" % GameState.format_money(cost), C_YELLOW, 10)
+		cost_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hbox.add_child(cost_lbl)
+
+		var can_afford := GameState.cash >= cost
+		var btn := _action_btn("Repair", C_GREEN if can_afford else C_DIM)
+		btn.disabled = not can_afford
+		var p_idx := plane_idx
+		btn.pressed.connect(func(): GameState.repair_plane(p_idx))
+		hbox.add_child(btn)
 
 	return m
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+func _action_btn(label: String, color: Color) -> Button:
+	var btn := Button.new()
+	btn.text = label
+	btn.flat = false
+	btn.add_theme_font_size_override("font_size", 9)
+	btn.add_theme_color_override("font_color",         color)
+	btn.add_theme_color_override("font_hover_color",   color)
+	btn.add_theme_color_override("font_pressed_color", color)
+	var s := StyleBoxFlat.new()
+	s.bg_color = Color(color.r, color.g, color.b, 0.15)
+	s.border_color = color
+	s.set_border_width_all(1)
+	s.content_margin_left = 6.0;  s.content_margin_right  = 6.0
+	s.content_margin_top  = 2.0;  s.content_margin_bottom = 2.0
+	var sh := s.duplicate() as StyleBoxFlat
+	sh.bg_color = Color(color.r, color.g, color.b, 0.3)
+	btn.add_theme_stylebox_override("normal",  s)
+	btn.add_theme_stylebox_override("hover",   sh)
+	btn.add_theme_stylebox_override("pressed", s)
+	return btn
 
 func _status_color(status: String) -> Color:
 	match status:
