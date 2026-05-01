@@ -69,18 +69,85 @@ var planes: Array = [
 
 var routes: Array = [
 	{
-		"origin": "PHL",
-		"origin_city": "Philadelphia",
-		"destination": "AVP",
-		"destination_city": "Wilkes-Barre",
-		"distance_mi": 81,
-		"assigned_plane": -1,
-		"status": "inactive",       # inactive | active
-		"ticket_price": 89.0,
-		"occupancy_rate": 0.8,
+		"origin": "PHL", "origin_city": "Philadelphia",
+		"destination": "AVP", "destination_city": "Wilkes-Barre",
+		"distance_mi": 81, "ticket_price": 89.0, "occupancy_rate": 0.80,
 		"flight_duration_sec": 60.0,
-		"flight_progress": 0.0,
-	}
+		"locked": false, "unlock_cost": 0.0,
+		"assigned_plane": -1, "status": "inactive", "flight_progress": 0.0,
+	},
+	{
+		"origin": "PHL", "origin_city": "Philadelphia",
+		"destination": "BOS", "destination_city": "Boston",
+		"distance_mi": 300, "ticket_price": 129.0, "occupancy_rate": 0.82,
+		"flight_duration_sec": 225.0,
+		"locked": true, "unlock_cost": 5000.0,
+		"assigned_plane": -1, "status": "inactive", "flight_progress": 0.0,
+	},
+	{
+		"origin": "PHL", "origin_city": "Philadelphia",
+		"destination": "DTW", "destination_city": "Detroit",
+		"distance_mi": 400, "ticket_price": 119.0, "occupancy_rate": 0.78,
+		"flight_duration_sec": 300.0,
+		"locked": true, "unlock_cost": 8000.0,
+		"assigned_plane": -1, "status": "inactive", "flight_progress": 0.0,
+	},
+	{
+		"origin": "PHL", "origin_city": "Philadelphia",
+		"destination": "ORD", "destination_city": "Chicago",
+		"distance_mi": 668, "ticket_price": 159.0, "occupancy_rate": 0.85,
+		"flight_duration_sec": 500.0,
+		"locked": true, "unlock_cost": 15000.0,
+		"assigned_plane": -1, "status": "inactive", "flight_progress": 0.0,
+	},
+	{
+		"origin": "PHL", "origin_city": "Philadelphia",
+		"destination": "ATL", "destination_city": "Atlanta",
+		"distance_mi": 655, "ticket_price": 149.0, "occupancy_rate": 0.83,
+		"flight_duration_sec": 490.0,
+		"locked": true, "unlock_cost": 18000.0,
+		"assigned_plane": -1, "status": "inactive", "flight_progress": 0.0,
+	},
+	{
+		"origin": "PHL", "origin_city": "Philadelphia",
+		"destination": "DFW", "destination_city": "Dallas",
+		"distance_mi": 907, "ticket_price": 179.0, "occupancy_rate": 0.80,
+		"flight_duration_sec": 680.0,
+		"locked": true, "unlock_cost": 30000.0,
+		"assigned_plane": -1, "status": "inactive", "flight_progress": 0.0,
+	},
+	{
+		"origin": "PHL", "origin_city": "Philadelphia",
+		"destination": "MIA", "destination_city": "Miami",
+		"distance_mi": 990, "ticket_price": 199.0, "occupancy_rate": 0.87,
+		"flight_duration_sec": 740.0,
+		"locked": true, "unlock_cost": 35000.0,
+		"assigned_plane": -1, "status": "inactive", "flight_progress": 0.0,
+	},
+	{
+		"origin": "PHL", "origin_city": "Philadelphia",
+		"destination": "DEN", "destination_city": "Denver",
+		"distance_mi": 1471, "ticket_price": 219.0, "occupancy_rate": 0.79,
+		"flight_duration_sec": 1100.0,
+		"locked": true, "unlock_cost": 60000.0,
+		"assigned_plane": -1, "status": "inactive", "flight_progress": 0.0,
+	},
+	{
+		"origin": "PHL", "origin_city": "Philadelphia",
+		"destination": "LAX", "destination_city": "Los Angeles",
+		"distance_mi": 2375, "ticket_price": 289.0, "occupancy_rate": 0.84,
+		"flight_duration_sec": 1780.0,
+		"locked": true, "unlock_cost": 120000.0,
+		"assigned_plane": -1, "status": "inactive", "flight_progress": 0.0,
+	},
+	{
+		"origin": "PHL", "origin_city": "Philadelphia",
+		"destination": "SEA", "destination_city": "Seattle",
+		"distance_mi": 2598, "ticket_price": 299.0, "occupancy_rate": 0.82,
+		"flight_duration_sec": 1950.0,
+		"locked": true, "unlock_cost": 150000.0,
+		"assigned_plane": -1, "status": "inactive", "flight_progress": 0.0,
+	},
 ]
 
 var _autosave_timer  := 0.0
@@ -178,6 +245,20 @@ func unassign_route(route_idx: int) -> void:
 	routes[route_idx]["flight_progress"] = 0.0
 	assignment_changed.emit()
 
+# ── Route unlock ─────────────────────────────────────────────────────────────
+
+func unlock_route(route_idx: int) -> void:
+	var route: Dictionary = routes[route_idx]
+	if not route["locked"]:
+		return
+	var cost := float(route["unlock_cost"])
+	if cash < cost:
+		return
+	cash -= cost
+	cash_changed.emit()
+	route["locked"] = false
+	assignment_changed.emit()
+
 # ── Purchase ──────────────────────────────────────────────────────────────────
 
 func buy_plane(catalog_idx: int) -> void:
@@ -258,7 +339,17 @@ func load_game() -> void:
 	if data.has("planes"):
 		planes = data["planes"]
 	if data.has("routes"):
-		routes = data["routes"]
+		var saved: Array = data["routes"]
+		# Merge saved mutable state into the canonical route list by matching
+		# origin+destination so adding new routes never breaks old saves.
+		for saved_route in saved:
+			for route in routes:
+				if route["origin"] == saved_route["origin"] and route["destination"] == saved_route["destination"]:
+					route["locked"]          = saved_route.get("locked", route["locked"])
+					route["assigned_plane"]  = saved_route.get("assigned_plane", -1)
+					route["status"]          = saved_route.get("status", "inactive")
+					route["flight_progress"] = saved_route.get("flight_progress", 0.0)
+					break
 	var elapsed := Time.get_unix_time_from_system() - float(data.get("timestamp", Time.get_unix_time_from_system()))
 	if elapsed > 0.0:
 		_simulate_offline(elapsed)

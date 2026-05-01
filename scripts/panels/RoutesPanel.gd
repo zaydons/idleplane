@@ -26,6 +26,7 @@ func _ready() -> void:
 	scroll.add_child(_vbox)
 
 	GameState.assignment_changed.connect(refresh)
+	GameState.cash_changed.connect(refresh)
 	refresh()
 
 func refresh() -> void:
@@ -40,7 +41,11 @@ func refresh() -> void:
 		_picker = null
 	_vbox.add_child(_section_header("ROUTES"))
 	for i in GameState.routes.size():
-		_vbox.add_child(_route_card(i))
+		var route: Dictionary = GameState.routes[i]
+		if route["locked"]:
+			_vbox.add_child(_locked_card(i))
+		else:
+			_vbox.add_child(_route_card(i))
 
 func _process(_delta: float) -> void:
 	for route_idx in _progress_labels:
@@ -133,6 +138,56 @@ func _route_card(route_idx: int) -> Control:
 		prog_lbl.text = "In flight  %s  %.0f%%" % [_bar(pct, 12), pct]
 	_progress_labels[route_idx] = prog_lbl
 	vbox.add_child(prog_lbl)
+
+	return m
+
+func _locked_card(route_idx: int) -> Control:
+	var route: Dictionary = GameState.routes[route_idx]
+
+	var m := MarginContainer.new()
+	m.add_theme_constant_override("margin_left",   8)
+	m.add_theme_constant_override("margin_right",  8)
+	m.add_theme_constant_override("margin_top",    2)
+	m.add_theme_constant_override("margin_bottom", 2)
+
+	var card := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#080f1e")
+	style.border_color = Color("#12203a")
+	style.set_border_width_all(1)
+	style.content_margin_left   = 8.0
+	style.content_margin_right  = 8.0
+	style.content_margin_top    = 6.0
+	style.content_margin_bottom = 6.0
+	card.add_theme_stylebox_override("panel", style)
+	m.add_child(card)
+
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 6)
+	card.add_child(hbox)
+
+	var info := VBoxContainer.new()
+	info.add_theme_constant_override("separation", 2)
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(info)
+
+	info.add_child(_lbl("%s -> %s  |  %d mi" % [route["origin"], route["destination"], route["distance_mi"]], C_DIM, 11))
+	info.add_child(_lbl("%s -> %s" % [route["origin_city"], route["destination_city"]], C_DIM, 10))
+	var rev := float(route["ticket_price"]) * float(route["occupancy_rate"])
+	info.add_child(_lbl("Ticket: %s  |  ~%s/seat" % [GameState.format_money(route["ticket_price"]), GameState.format_money(rev)], C_DIM, 10))
+
+	var right := VBoxContainer.new()
+	right.add_theme_constant_override("separation", 4)
+	right.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.add_child(right)
+
+	var cost := float(route["unlock_cost"])
+	var can_afford := GameState.cash >= cost
+	var btn := _action_btn("Unlock\n%s" % GameState.format_money(cost), C_YELLOW if can_afford else C_DIM)
+	btn.disabled = not can_afford
+	var r_idx := route_idx
+	btn.pressed.connect(func(): GameState.unlock_route(r_idx))
+	right.add_child(btn)
 
 	return m
 
