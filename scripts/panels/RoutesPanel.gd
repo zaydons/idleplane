@@ -3,7 +3,7 @@ extends Control
 const C_CARD   := Color("#0d1525")
 const C_BORDER := Color("#1a2840")
 const C_TEXT   := Color("#c0d0e8")
-const C_DIM    := Color("#485870")
+const C_DIM    := Color("#6a7c94")
 const C_ACCENT := Color("#5090d8")
 const C_GREEN  := Color("#38c870")
 const C_YELLOW := Color("#e8b830")
@@ -63,13 +63,13 @@ func _process(_delta: float) -> void:
 
 func _section_header(title: String) -> Control:
 	var m := MarginContainer.new()
-	m.add_theme_constant_override("margin_left",   8)
+	m.add_theme_constant_override("margin_left",   12)
 	m.add_theme_constant_override("margin_top",    6)
 	m.add_theme_constant_override("margin_bottom", 2)
 	var l := Label.new()
 	l.text = title
 	l.add_theme_color_override("font_color", C_ACCENT)
-	l.add_theme_font_size_override("font_size", 12)
+	l.add_theme_font_size_override("font_size", 13)
 	m.add_child(l)
 	return m
 
@@ -77,8 +77,8 @@ func _route_card(route_idx: int) -> Control:
 	var route: Dictionary = GameState.routes[route_idx]
 
 	var m := MarginContainer.new()
-	m.add_theme_constant_override("margin_left",   8)
-	m.add_theme_constant_override("margin_right",  8)
+	m.add_theme_constant_override("margin_left",   12)
+	m.add_theme_constant_override("margin_right",  12)
 	m.add_theme_constant_override("margin_top",    2)
 	m.add_theme_constant_override("margin_bottom", 2)
 
@@ -99,8 +99,8 @@ func _route_card(route_idx: int) -> Control:
 	card.add_child(vbox)
 
 	vbox.add_child(_lbl("%s  ->  %s" % [route["origin"], route["destination"]], C_TEXT, 12))
-	vbox.add_child(_lbl("%s -> %s" % [route["origin_city"], route["destination_city"]], C_DIM, 10))
-	vbox.add_child(_lbl("%d mi  |  Ticket: %s" % [route["distance_mi"], GameState.format_money(route["ticket_price"])], C_DIM, 10))
+	vbox.add_child(_lbl("%s -> %s" % [route["origin_city"], route["destination_city"]], C_DIM, 12))
+	vbox.add_child(_lbl("%d mi  |  Ticket: %s" % [route["distance_mi"], GameState.format_money(route["ticket_price"])], C_DIM, 12))
 	vbox.add_child(_sep())
 
 	# Aircraft row
@@ -110,7 +110,7 @@ func _route_card(route_idx: int) -> Control:
 
 	var assigned: int = route["assigned_plane"]
 	var aircraft_lbl := Label.new()
-	aircraft_lbl.add_theme_font_size_override("font_size", 10)
+	aircraft_lbl.add_theme_font_size_override("font_size", 13)
 	aircraft_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	aircraft_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
@@ -130,7 +130,7 @@ func _route_card(route_idx: int) -> Control:
 		hbox.add_child(btn)
 
 	# Live progress bar (only visible when active)
-	var prog_lbl := _lbl("", C_ACCENT, 10)
+	var prog_lbl := _lbl("", C_ACCENT, 11)
 	prog_lbl.visible = (route["status"] == "active")
 	if route["status"] == "active":
 		var pct := float(route["flight_progress"]) / float(route["flight_duration_sec"]) * 100.0
@@ -144,8 +144,8 @@ func _locked_card(route_idx: int) -> Control:
 	var route: Dictionary = GameState.routes[route_idx]
 
 	var m := MarginContainer.new()
-	m.add_theme_constant_override("margin_left",   8)
-	m.add_theme_constant_override("margin_right",  8)
+	m.add_theme_constant_override("margin_left",   12)
+	m.add_theme_constant_override("margin_right",  12)
 	m.add_theme_constant_override("margin_top",    2)
 	m.add_theme_constant_override("margin_bottom", 2)
 
@@ -170,10 +170,10 @@ func _locked_card(route_idx: int) -> Control:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(info)
 
-	info.add_child(_lbl("%s -> %s  |  %d mi" % [route["origin"], route["destination"], route["distance_mi"]], C_DIM, 11))
-	info.add_child(_lbl("%s -> %s" % [route["origin_city"], route["destination_city"]], C_DIM, 10))
+	info.add_child(_lbl("%s -> %s  |  %d mi" % [route["origin"], route["destination"], route["distance_mi"]], C_DIM, 12))
+	info.add_child(_lbl("%s -> %s" % [route["origin_city"], route["destination_city"]], C_DIM, 12))
 	var rev := float(route["ticket_price"]) * float(route["occupancy_rate"])
-	info.add_child(_lbl("Ticket: %s  |  ~%s/seat" % [GameState.format_money(route["ticket_price"]), GameState.format_money(rev)], C_DIM, 10))
+	info.add_child(_lbl("Ticket: %s  |  ~%s/seat" % [GameState.format_money(route["ticket_price"]), GameState.format_money(rev)], C_DIM, 12))
 
 	var right := VBoxContainer.new()
 	right.add_theme_constant_override("separation", 4)
@@ -247,7 +247,7 @@ func _show_picker(route_idx: int) -> void:
 		var btn := Button.new()
 		btn.text = plane["name"] + ("  (reassign)" if is_elsewhere else "")
 		btn.flat = true
-		btn.add_theme_font_size_override("font_size", 10)
+		btn.add_theme_font_size_override("font_size", 13)
 		btn.add_theme_color_override("font_color",         C_DIM if is_elsewhere else C_TEXT)
 		btn.add_theme_color_override("font_hover_color",   C_ACCENT)
 		btn.add_theme_color_override("font_pressed_color", C_ACCENT)
@@ -259,7 +259,7 @@ func _show_picker(route_idx: int) -> void:
 		vbox.add_child(btn)
 
 	if not any:
-		var none_lbl := _lbl("No aircraft available", C_DIM, 10)
+		var none_lbl := _lbl("No aircraft available", C_DIM, 12)
 		none_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		vbox.add_child(none_lbl)
 
@@ -268,7 +268,7 @@ func _show_picker(route_idx: int) -> void:
 	var cancel := Button.new()
 	cancel.text = "Cancel"
 	cancel.flat = true
-	cancel.add_theme_font_size_override("font_size", 10)
+	cancel.add_theme_font_size_override("font_size", 13)
 	cancel.add_theme_color_override("font_color",       C_DIM)
 	cancel.add_theme_color_override("font_hover_color", C_TEXT)
 	cancel.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -288,7 +288,7 @@ func _action_btn(label: String, color: Color) -> Button:
 	var btn := Button.new()
 	btn.text = label
 	btn.flat = false
-	btn.add_theme_font_size_override("font_size", 9)
+	btn.add_theme_font_size_override("font_size", 13)
 	btn.add_theme_color_override("font_color",         color)
 	btn.add_theme_color_override("font_hover_color",   color)
 	btn.add_theme_color_override("font_pressed_color", color)
@@ -296,8 +296,8 @@ func _action_btn(label: String, color: Color) -> Button:
 	s.bg_color = Color(color.r, color.g, color.b, 0.15)
 	s.border_color = color
 	s.set_border_width_all(1)
-	s.content_margin_left = 6.0;  s.content_margin_right  = 6.0
-	s.content_margin_top  = 2.0;  s.content_margin_bottom = 2.0
+	s.content_margin_left = 12.0;  s.content_margin_right  = 12.0
+	s.content_margin_top  = 6.0;  s.content_margin_bottom = 6.0
 	var sh := s.duplicate() as StyleBoxFlat
 	sh.bg_color = Color(color.r, color.g, color.b, 0.3)
 	btn.add_theme_stylebox_override("normal",  s)

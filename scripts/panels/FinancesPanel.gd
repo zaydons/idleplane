@@ -3,7 +3,7 @@ extends Control
 const C_CARD   := Color("#0d1525")
 const C_BORDER := Color("#1a2840")
 const C_TEXT   := Color("#c0d0e8")
-const C_DIM    := Color("#485870")
+const C_DIM    := Color("#6a7c94")
 const C_ACCENT := Color("#5090d8")
 const C_GOLD   := Color("#e8b830")
 const C_GREEN  := Color("#38c870")
@@ -127,8 +127,8 @@ func _get_active_routes() -> Array:
 
 func _make_card() -> Control:
 	var m := MarginContainer.new()
-	m.add_theme_constant_override("margin_left",   8)
-	m.add_theme_constant_override("margin_right",  8)
+	m.add_theme_constant_override("margin_left",   12)
+	m.add_theme_constant_override("margin_right",  12)
 	m.add_theme_constant_override("margin_top",    2)
 	m.add_theme_constant_override("margin_bottom", 2)
 
@@ -152,13 +152,13 @@ func _make_card() -> Control:
 
 func _section_header(title: String) -> Control:
 	var m := MarginContainer.new()
-	m.add_theme_constant_override("margin_left",   8)
+	m.add_theme_constant_override("margin_left",   12)
 	m.add_theme_constant_override("margin_top",    6)
 	m.add_theme_constant_override("margin_bottom", 2)
 	var l := Label.new()
 	l.text = title
 	l.add_theme_color_override("font_color", C_ACCENT)
-	l.add_theme_font_size_override("font_size", 12)
+	l.add_theme_font_size_override("font_size", 13)
 	m.add_child(l)
 	return m
 
@@ -167,13 +167,13 @@ func _row(label_text: String, value_text: String, value_color: Color) -> HBoxCon
 	var lbl := Label.new()
 	lbl.text = label_text
 	lbl.add_theme_color_override("font_color", C_DIM)
-	lbl.add_theme_font_size_override("font_size", 10)
+	lbl.add_theme_font_size_override("font_size", 11)
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(lbl)
 	var val := Label.new()
 	val.text = value_text
 	val.add_theme_color_override("font_color", value_color)
-	val.add_theme_font_size_override("font_size", 10)
+	val.add_theme_font_size_override("font_size", 11)
 	val.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	hbox.add_child(val)
 	return hbox

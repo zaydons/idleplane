@@ -13,7 +13,7 @@ const C_BORDER  := Color("#1a2840")
 const C_TAB_ON  := Color("#183060")
 const C_TAB_OFF := Color("#0a1428")
 const C_TEXT    := Color("#c0d0e8")
-const C_DIM     := Color("#485870")
+const C_DIM     := Color("#6a7c94")
 const C_ACCENT  := Color("#5090d8")
 const C_GOLD    := Color("#e8b830")
 
@@ -45,7 +45,7 @@ func _build() -> void:
 
 func _make_top_bar() -> Control:
 	var bar := PanelContainer.new()
-	bar.custom_minimum_size = Vector2(0, 22)
+	bar.custom_minimum_size = Vector2(0, 32)
 	bar.add_theme_stylebox_override("panel", _flat(C_BAR, C_BORDER, 0, 0, 1, 0))
 
 	var hbox := HBoxContainer.new()
@@ -69,7 +69,7 @@ func _make_top_bar() -> Control:
 	_speed_btn = Button.new()
 	_speed_btn.text = "1×"
 	_speed_btn.flat = true
-	_speed_btn.add_theme_font_size_override("font_size", 10)
+	_speed_btn.add_theme_font_size_override("font_size", 12)
 	_speed_btn.add_theme_color_override("font_color", C_DIM)
 	_speed_btn.add_theme_color_override("font_hover_color", C_TEXT)
 	_speed_btn.add_theme_color_override("font_pressed_color", C_TEXT)
@@ -116,7 +116,7 @@ func _make_content() -> Control:
 
 func _make_tab_bar() -> Control:
 	var bar := PanelContainer.new()
-	bar.custom_minimum_size = Vector2(0, 26)
+	bar.custom_minimum_size = Vector2(0, 40)
 	bar.add_theme_stylebox_override("panel", _flat(C_BAR, C_BORDER, 1, 0, 0, 0))
 
 	var hbox := HBoxContainer.new()
@@ -128,7 +128,7 @@ func _make_tab_bar() -> Control:
 		btn.text = TAB_NAMES[i]
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.flat = true
-		btn.add_theme_font_size_override("font_size", 10)
+		btn.add_theme_font_size_override("font_size", 12)
 		var idx := i
 		btn.pressed.connect(func(): _switch_tab(idx))
 		hbox.add_child(btn)
