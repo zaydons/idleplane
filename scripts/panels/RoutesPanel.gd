@@ -219,6 +219,7 @@ func _show_picker(route_idx: int) -> void:
 
 	var card := PanelContainer.new()
 	card.custom_minimum_size = Vector2(240, 0)
+	card.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var cs := StyleBoxFlat.new()
 	cs.bg_color = C_CARD
 	cs.border_color = C_ACCENT
@@ -228,14 +229,26 @@ func _show_picker(route_idx: int) -> void:
 	card.add_theme_stylebox_override("panel", cs)
 	center.add_child(card)
 
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 4)
-	card.add_child(vbox)
+	var outer_vbox := VBoxContainer.new()
+	outer_vbox.add_theme_constant_override("separation", 4)
+	card.add_child(outer_vbox)
 
 	var title := _lbl("SELECT AIRCRAFT", C_ACCENT, 11)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(title)
-	vbox.add_child(_sep())
+	outer_vbox.add_child(title)
+	outer_vbox.add_child(_sep())
+
+	# Scrollable plane list
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, 0)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	outer_vbox.add_child(scroll)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 4)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(vbox)
 
 	var any := false
 	for plane_idx in GameState.planes.size():
@@ -257,6 +270,11 @@ func _show_picker(route_idx: int) -> void:
 		var p_idx := plane_idx
 		btn.pressed.connect(func(): GameState.assign_plane_to_route(p_idx, route_idx))
 		vbox.add_child(btn)
+
+	# Cap the scroll area height so it doesn't overflow the screen
+	var row_h := 36
+	var max_visible := 5
+	scroll.custom_minimum_size = Vector2(0, mini(GameState.planes.size(), max_visible) * row_h)
 
 	if not any:
 		var none_lbl := _lbl("No aircraft available", C_DIM, 12)
