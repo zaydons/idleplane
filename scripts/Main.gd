@@ -21,6 +21,9 @@ var _panels := []
 var _tab_btns := []
 var _cash_lbl: Label
 var _speed_btn: Button
+var _finances_tap_count := 0
+var _finances_tap_timer := 0.0
+var _cheat_overlay: Control = null
 
 func _ready() -> void:
 	_build()
@@ -130,11 +133,130 @@ func _make_tab_bar() -> Control:
 		btn.flat = true
 		btn.add_theme_font_size_override("font_size", 12)
 		var idx := i
-		btn.pressed.connect(func(): _switch_tab(idx))
+		btn.pressed.connect(func(): _on_tab_pressed(idx))
 		hbox.add_child(btn)
 		_tab_btns.append(btn)
 
 	return bar
+
+func _on_tab_pressed(idx: int) -> void:
+	_switch_tab(idx)
+	if idx == 2:  # Finances tab
+		_finances_tap_timer = 2.0
+		_finances_tap_count += 1
+		if _finances_tap_count >= 5:
+			_finances_tap_count = 0
+			_show_cheat_dialog()
+	else:
+		_finances_tap_count = 0
+
+func _process(delta: float) -> void:
+	if _finances_tap_timer > 0.0:
+		_finances_tap_timer -= delta
+		if _finances_tap_timer <= 0.0:
+			_finances_tap_count = 0
+
+func _show_cheat_dialog() -> void:
+	if _cheat_overlay:
+		return
+
+	_cheat_overlay = Control.new()
+	_cheat_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_cheat_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_cheat_overlay)
+
+	var bg := ColorRect.new()
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.color = Color(0.0, 0.02, 0.08, 0.88)
+	_cheat_overlay.add_child(bg)
+
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_PASS
+	_cheat_overlay.add_child(center)
+
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(220, 0)
+	var cs := StyleBoxFlat.new()
+	cs.bg_color = Color("#0d1525")
+	cs.border_color = Color("#5090d8")
+	cs.set_border_width_all(1)
+	cs.content_margin_left = 14.0; cs.content_margin_right  = 14.0
+	cs.content_margin_top  = 12.0; cs.content_margin_bottom = 12.0
+	card.add_theme_stylebox_override("panel", cs)
+	center.add_child(card)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	card.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "ADD CASH"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_color_override("font_color", Color("#5090d8"))
+	title.add_theme_font_size_override("font_size", 13)
+	vbox.add_child(title)
+
+	var input := LineEdit.new()
+	input.placeholder_text = "Amount (e.g. 100000)"
+	input.add_theme_font_size_override("font_size", 12)
+	input.add_theme_color_override("font_color", Color("#c0d0e8"))
+	var input_style := StyleBoxFlat.new()
+	input_style.bg_color = Color("#060b15")
+	input_style.border_color = Color("#1a2840")
+	input_style.set_border_width_all(1)
+	input_style.content_margin_left = 8.0; input_style.content_margin_right  = 8.0
+	input_style.content_margin_top  = 6.0; input_style.content_margin_bottom = 6.0
+	input.add_theme_stylebox_override("normal", input_style)
+	input.add_theme_stylebox_override("focus",  input_style)
+	vbox.add_child(input)
+
+	var btn_row := HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(btn_row)
+
+	var cancel_btn := _dialog_btn("Cancel", Color("#6a7c94"))
+	cancel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cancel_btn.pressed.connect(func():
+		_cheat_overlay.queue_free()
+		_cheat_overlay = null
+	)
+	btn_row.add_child(cancel_btn)
+
+	var confirm_btn := _dialog_btn("Add", Color("#38c870"))
+	confirm_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	confirm_btn.pressed.connect(func():
+		var amount := input.text.to_float()
+		if amount > 0.0:
+			GameState.cash += amount
+			GameState.cash_changed.emit()
+		_cheat_overlay.queue_free()
+		_cheat_overlay = null
+	)
+	btn_row.add_child(confirm_btn)
+
+	input.grab_focus()
+
+func _dialog_btn(label: String, color: Color) -> Button:
+	var btn := Button.new()
+	btn.text = label
+	btn.flat = false
+	btn.add_theme_font_size_override("font_size", 12)
+	btn.add_theme_color_override("font_color",         color)
+	btn.add_theme_color_override("font_hover_color",   color)
+	btn.add_theme_color_override("font_pressed_color", color)
+	var s := StyleBoxFlat.new()
+	s.bg_color = Color(color.r, color.g, color.b, 0.15)
+	s.border_color = color
+	s.set_border_width_all(1)
+	s.content_margin_left = 8.0; s.content_margin_right  = 8.0
+	s.content_margin_top  = 6.0; s.content_margin_bottom = 6.0
+	var sh := s.duplicate() as StyleBoxFlat
+	sh.bg_color = Color(color.r, color.g, color.b, 0.3)
+	btn.add_theme_stylebox_override("normal",  s)
+	btn.add_theme_stylebox_override("hover",   sh)
+	btn.add_theme_stylebox_override("pressed", s)
+	return btn
 
 func _switch_tab(idx: int) -> void:
 	for i in _panels.size():
