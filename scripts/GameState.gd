@@ -605,6 +605,36 @@ static func repair_cost_for_plane(plane: Dictionary) -> float:
 	var age_mult := 1.0 + int(plane["total_flights"]) * 0.005
 	return damage * float(plane["repair_cost_per_pct"]) * age_mult
 
+static func sell_price_for_plane(plane: Dictionary) -> float:
+	var base := 0.0
+	for entry in PLANE_CATALOG:
+		if entry["name"] == plane["name"]:
+			base = float(entry["price"])
+			break
+	if base <= 0.0:
+		base = float(plane["repair_cost_per_pct"]) * 200.0
+	return base * (float(plane["condition"]) / 100.0) * 0.5
+
+func sell_plane(plane_idx: int) -> void:
+	var plane: Dictionary = planes[plane_idx]
+	if plane["status"] == "flying":
+		return
+	var route_idx: int = int(plane["assigned_route"])
+	if route_idx != -1:
+		routes[route_idx]["assigned_plane"] = -1
+		routes[route_idx]["status"] = "inactive"
+		routes[route_idx]["flight_progress"] = 0.0
+	var price := sell_price_for_plane(plane)
+	cash += price
+	cash_changed.emit()
+	planes.remove_at(plane_idx)
+	# Fix route assigned_plane indices shifted by removal
+	for route in routes:
+		var ap: int = int(route["assigned_plane"])
+		if ap > plane_idx:
+			route["assigned_plane"] = ap - 1
+	assignment_changed.emit()
+
 func repair_plane(plane_idx: int) -> void:
 	var plane: Dictionary = planes[plane_idx]
 	if plane["status"] == "maintenance":

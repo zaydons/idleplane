@@ -185,6 +185,15 @@ func _plane_card(plane_idx: int) -> Control:
 		btn.pressed.connect(func(): GameState.repair_plane(p_idx))
 		right.add_child(btn)
 
+	# Sell button — available when grounded or in maintenance (not mid-flight)
+	if status != "flying":
+		var sell_price := GameState.sell_price_for_plane(plane)
+		var sell_btn := _action_btn("Sell  %s" % GameState.format_money(sell_price), C_DIM)
+		sell_btn.add_theme_font_size_override("font_size", 10)
+		var p_idx: int = plane_idx
+		sell_btn.pressed.connect(func(): GameState.sell_plane(p_idx))
+		right.add_child(sell_btn)
+
 	return m
 
 func _market_card(catalog_idx: int) -> Control:
