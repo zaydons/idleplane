@@ -57,7 +57,7 @@ func _process(_delta: float) -> void:
 			continue
 		var pct := float(route["flight_progress"]) / float(route["flight_duration_sec"]) * 100.0
 		lbl.visible = true
-		lbl.text = "In flight  %s  %.0f%%" % [_bar(pct, 12), pct]
+		lbl.text = "In flight  %s  %.0f%%" % [_bar(pct, 10), pct]
 
 # ── Card builder ──────────────────────────────────────────────────────────────
 
@@ -94,48 +94,55 @@ func _route_card(route_idx: int) -> Control:
 	card.add_theme_stylebox_override("panel", style)
 	m.add_child(card)
 
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 3)
-	card.add_child(vbox)
+	var cols := HBoxContainer.new()
+	cols.add_theme_constant_override("separation", 10)
+	card.add_child(cols)
 
-	vbox.add_child(_lbl("%s  ->  %s" % [route["origin"], route["destination"]], C_TEXT, 12))
-	vbox.add_child(_lbl("%s -> %s" % [route["origin_city"], route["destination_city"]], C_DIM, 12))
-	vbox.add_child(_lbl("%d mi  |  Ticket: %s" % [route["distance_mi"], GameState.format_money(route["ticket_price"])], C_DIM, 12))
-	vbox.add_child(_sep())
+	# ── Left: route identity ──────────────────────────────────────────
+	var left := VBoxContainer.new()
+	left.add_theme_constant_override("separation", 2)
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cols.add_child(left)
 
-	# Aircraft row
-	var hbox := HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 6)
-	vbox.add_child(hbox)
+	left.add_child(_lbl("%s -> %s" % [route["origin"], route["destination"]], C_TEXT, 13))
+	left.add_child(_lbl("%s / %s" % [route["origin_city"], route["destination_city"]], C_DIM, 11))
+	left.add_child(_lbl("%d mi  |  %s/seat" % [route["distance_mi"], GameState.format_money(route["ticket_price"])], C_DIM, 11))
+
+	# ── Right: aircraft + status ──────────────────────────────────────
+	var right := VBoxContainer.new()
+	right.add_theme_constant_override("separation", 4)
+	right.alignment = BoxContainer.ALIGNMENT_CENTER
+	cols.add_child(right)
 
 	var assigned: int = int(route["assigned_plane"])
-	var aircraft_lbl := Label.new()
-	aircraft_lbl.add_theme_font_size_override("font_size", 13)
-	aircraft_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	aircraft_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+
+	var ac_row := HBoxContainer.new()
+	ac_row.add_theme_constant_override("separation", 6)
+	right.add_child(ac_row)
 
 	if assigned == -1:
-		aircraft_lbl.text = "Aircraft: none"
-		aircraft_lbl.add_theme_color_override("font_color", C_YELLOW)
-		hbox.add_child(aircraft_lbl)
+		var none_lbl := _lbl("No aircraft", C_YELLOW, 11)
+		none_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		ac_row.add_child(none_lbl)
 		var btn := _action_btn("Assign", C_ACCENT)
 		btn.pressed.connect(func(): _show_picker(route_idx))
-		hbox.add_child(btn)
+		ac_row.add_child(btn)
 	else:
 		var plane_status: String = GameState.planes[assigned]["status"]
 		var name_color := C_YELLOW if plane_status == "maintenance" else C_GREEN
-		aircraft_lbl.text = "Aircraft: %s" % GameState.planes[assigned]["name"]
-		aircraft_lbl.add_theme_color_override("font_color", name_color)
-		hbox.add_child(aircraft_lbl)
+		var name_lbl := _lbl(GameState.planes[assigned]["name"], name_color, 11)
+		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		ac_row.add_child(name_lbl)
 		var btn := _action_btn("Unassign", C_RED)
 		btn.pressed.connect(func(): GameState.unassign_route(route_idx))
-		hbox.add_child(btn)
+		ac_row.add_child(btn)
 
-	# Status line: in-flight progress, paused reason, or nothing
+	# Progress / pause status
 	var prog_lbl := _lbl("", C_ACCENT, 11)
+	prog_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	if route["status"] == "active":
 		var pct := float(route["flight_progress"]) / float(route["flight_duration_sec"]) * 100.0
-		prog_lbl.text = "In flight  %s  %.0f%%" % [_bar(pct, 12), pct]
+		prog_lbl.text = "In flight  %s  %.0f%%" % [_bar(pct, 10), pct]
 		prog_lbl.visible = true
 	elif assigned != -1:
 		var plane_st: String = GameState.planes[assigned]["status"]
@@ -149,7 +156,7 @@ func _route_card(route_idx: int) -> Control:
 	else:
 		prog_lbl.visible = false
 	_progress_labels[route_idx] = prog_lbl
-	vbox.add_child(prog_lbl)
+	right.add_child(prog_lbl)
 
 	return m
 
@@ -183,10 +190,9 @@ func _locked_card(route_idx: int) -> Control:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(info)
 
-	info.add_child(_lbl("%s -> %s  |  %d mi" % [route["origin"], route["destination"], route["distance_mi"]], C_DIM, 12))
-	info.add_child(_lbl("%s -> %s" % [route["origin_city"], route["destination_city"]], C_DIM, 12))
-	var rev := float(route["ticket_price"]) * float(route["occupancy_rate"])
-	info.add_child(_lbl("Ticket: %s  |  ~%s/seat" % [GameState.format_money(route["ticket_price"]), GameState.format_money(rev)], C_DIM, 12))
+	info.add_child(_lbl("%s -> %s" % [route["origin"], route["destination"]], C_DIM, 13))
+	info.add_child(_lbl("%s / %s" % [route["origin_city"], route["destination_city"]], C_DIM, 11))
+	info.add_child(_lbl("%d mi  |  %s/seat" % [route["distance_mi"], GameState.format_money(route["ticket_price"])], C_DIM, 11))
 
 	var right := VBoxContainer.new()
 	right.add_theme_constant_override("separation", 4)

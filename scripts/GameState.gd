@@ -9,6 +9,7 @@ signal used_market_changed
 const SAVE_PATH         := "user://save.json"
 const AUTOSAVE_INTERVAL := 30.0
 const USED_MARKET_SIZE  := 10
+const MIN_LOCKED_ROUTES := 5
 
 const PLANE_CATALOG: Array = [
 	{
@@ -71,6 +72,90 @@ const PLANE_CATALOG: Array = [
 		"repair_cost_per_pct": 900.0, "repair_time_sec_per_pct": 2.8,
 		"description": "165-seat fuel-efficient jet",
 	},
+]
+
+# Routes unlocked progressively; always maintain MIN_LOCKED_ROUTES locked entries
+const ROUTE_POOL: Array = [
+	{"origin":"JFK","origin_city":"New York","destination":"BOS","destination_city":"Boston",
+	 "distance_mi":187,"ticket_price":99.0,"occupancy_rate":0.83,"flight_duration_sec":138.0,"unlock_cost":4000.0},
+	{"origin":"JFK","origin_city":"New York","destination":"ORD","destination_city":"Chicago",
+	 "distance_mi":740,"ticket_price":159.0,"occupancy_rate":0.84,"flight_duration_sec":548.0,"unlock_cost":22000.0},
+	{"origin":"JFK","origin_city":"New York","destination":"MIA","destination_city":"Miami",
+	 "distance_mi":1090,"ticket_price":189.0,"occupancy_rate":0.85,"flight_duration_sec":807.0,"unlock_cost":40000.0},
+	{"origin":"JFK","origin_city":"New York","destination":"LAX","destination_city":"Los Angeles",
+	 "distance_mi":2475,"ticket_price":299.0,"occupancy_rate":0.86,"flight_duration_sec":1832.0,"unlock_cost":130000.0},
+	{"origin":"JFK","origin_city":"New York","destination":"LHR","destination_city":"London",
+	 "distance_mi":3459,"ticket_price":699.0,"occupancy_rate":0.88,"flight_duration_sec":2560.0,"unlock_cost":800000.0},
+	{"origin":"JFK","origin_city":"New York","destination":"CDG","destination_city":"Paris",
+	 "distance_mi":3635,"ticket_price":749.0,"occupancy_rate":0.87,"flight_duration_sec":2690.0,"unlock_cost":900000.0},
+	{"origin":"JFK","origin_city":"New York","destination":"NRT","destination_city":"Tokyo",
+	 "distance_mi":6760,"ticket_price":1299.0,"occupancy_rate":0.86,"flight_duration_sec":5003.0,"unlock_cost":2600000.0},
+	{"origin":"ATL","origin_city":"Atlanta","destination":"MIA","destination_city":"Miami",
+	 "distance_mi":662,"ticket_price":129.0,"occupancy_rate":0.86,"flight_duration_sec":490.0,"unlock_cost":22000.0},
+	{"origin":"ATL","origin_city":"Atlanta","destination":"ORD","destination_city":"Chicago",
+	 "distance_mi":606,"ticket_price":139.0,"occupancy_rate":0.82,"flight_duration_sec":449.0,"unlock_cost":20000.0},
+	{"origin":"ATL","origin_city":"Atlanta","destination":"CUN","destination_city":"Cancun",
+	 "distance_mi":1095,"ticket_price":249.0,"occupancy_rate":0.85,"flight_duration_sec":810.0,"unlock_cost":45000.0},
+	{"origin":"ATL","origin_city":"Atlanta","destination":"LAX","destination_city":"Los Angeles",
+	 "distance_mi":1946,"ticket_price":239.0,"occupancy_rate":0.83,"flight_duration_sec":1440.0,"unlock_cost":90000.0},
+	{"origin":"ATL","origin_city":"Atlanta","destination":"LHR","destination_city":"London",
+	 "distance_mi":4197,"ticket_price":799.0,"occupancy_rate":0.86,"flight_duration_sec":3106.0,"unlock_cost":1000000.0},
+	{"origin":"ORD","origin_city":"Chicago","destination":"MIA","destination_city":"Miami",
+	 "distance_mi":1197,"ticket_price":179.0,"occupancy_rate":0.83,"flight_duration_sec":886.0,"unlock_cost":50000.0},
+	{"origin":"ORD","origin_city":"Chicago","destination":"SEA","destination_city":"Seattle",
+	 "distance_mi":1721,"ticket_price":209.0,"occupancy_rate":0.82,"flight_duration_sec":1273.0,"unlock_cost":70000.0},
+	{"origin":"ORD","origin_city":"Chicago","destination":"LAX","destination_city":"Los Angeles",
+	 "distance_mi":1745,"ticket_price":219.0,"occupancy_rate":0.84,"flight_duration_sec":1292.0,"unlock_cost":75000.0},
+	{"origin":"ORD","origin_city":"Chicago","destination":"LHR","destination_city":"London",
+	 "distance_mi":3942,"ticket_price":799.0,"occupancy_rate":0.86,"flight_duration_sec":2917.0,"unlock_cost":1100000.0},
+	{"origin":"ORD","origin_city":"Chicago","destination":"NRT","destination_city":"Tokyo",
+	 "distance_mi":6299,"ticket_price":1199.0,"occupancy_rate":0.85,"flight_duration_sec":4661.0,"unlock_cost":2200000.0},
+	{"origin":"LAX","origin_city":"Los Angeles","destination":"LAS","destination_city":"Las Vegas",
+	 "distance_mi":236,"ticket_price":79.0,"occupancy_rate":0.87,"flight_duration_sec":175.0,"unlock_cost":5000.0},
+	{"origin":"LAX","origin_city":"Los Angeles","destination":"SFO","destination_city":"San Francisco",
+	 "distance_mi":337,"ticket_price":89.0,"occupancy_rate":0.84,"flight_duration_sec":249.0,"unlock_cost":8000.0},
+	{"origin":"LAX","origin_city":"Los Angeles","destination":"HNL","destination_city":"Honolulu",
+	 "distance_mi":2556,"ticket_price":449.0,"occupancy_rate":0.86,"flight_duration_sec":1892.0,"unlock_cost":180000.0},
+	{"origin":"LAX","origin_city":"Los Angeles","destination":"LHR","destination_city":"London",
+	 "distance_mi":5456,"ticket_price":1099.0,"occupancy_rate":0.85,"flight_duration_sec":4037.0,"unlock_cost":1900000.0},
+	{"origin":"LAX","origin_city":"Los Angeles","destination":"NRT","destination_city":"Tokyo",
+	 "distance_mi":5479,"ticket_price":1099.0,"occupancy_rate":0.87,"flight_duration_sec":4055.0,"unlock_cost":1800000.0},
+	{"origin":"LAX","origin_city":"Los Angeles","destination":"SYD","destination_city":"Sydney",
+	 "distance_mi":7488,"ticket_price":1299.0,"occupancy_rate":0.84,"flight_duration_sec":5541.0,"unlock_cost":3000000.0},
+	{"origin":"MIA","origin_city":"Miami","destination":"CUN","destination_city":"Cancun",
+	 "distance_mi":528,"ticket_price":149.0,"occupancy_rate":0.87,"flight_duration_sec":391.0,"unlock_cost":15000.0},
+	{"origin":"MIA","origin_city":"Miami","destination":"BOG","destination_city":"Bogota",
+	 "distance_mi":1148,"ticket_price":229.0,"occupancy_rate":0.82,"flight_duration_sec":850.0,"unlock_cost":55000.0},
+	{"origin":"MIA","origin_city":"Miami","destination":"MEX","destination_city":"Mexico City",
+	 "distance_mi":1298,"ticket_price":239.0,"occupancy_rate":0.83,"flight_duration_sec":961.0,"unlock_cost":65000.0},
+	{"origin":"MIA","origin_city":"Miami","destination":"GRU","destination_city":"Sao Paulo",
+	 "distance_mi":4084,"ticket_price":799.0,"occupancy_rate":0.83,"flight_duration_sec":3022.0,"unlock_cost":950000.0},
+	{"origin":"MIA","origin_city":"Miami","destination":"LHR","destination_city":"London",
+	 "distance_mi":4420,"ticket_price":849.0,"occupancy_rate":0.85,"flight_duration_sec":3271.0,"unlock_cost":1200000.0},
+	{"origin":"DFW","origin_city":"Dallas","destination":"ORD","destination_city":"Chicago",
+	 "distance_mi":802,"ticket_price":149.0,"occupancy_rate":0.83,"flight_duration_sec":594.0,"unlock_cost":30000.0},
+	{"origin":"DFW","origin_city":"Dallas","destination":"CUN","destination_city":"Cancun",
+	 "distance_mi":1046,"ticket_price":219.0,"occupancy_rate":0.85,"flight_duration_sec":774.0,"unlock_cost":40000.0},
+	{"origin":"DFW","origin_city":"Dallas","destination":"LAX","destination_city":"Los Angeles",
+	 "distance_mi":1235,"ticket_price":169.0,"occupancy_rate":0.84,"flight_duration_sec":914.0,"unlock_cost":45000.0},
+	{"origin":"DFW","origin_city":"Dallas","destination":"LHR","destination_city":"London",
+	 "distance_mi":4746,"ticket_price":899.0,"occupancy_rate":0.85,"flight_duration_sec":3512.0,"unlock_cost":1500000.0},
+	{"origin":"DFW","origin_city":"Dallas","destination":"NRT","destination_city":"Tokyo",
+	 "distance_mi":6551,"ticket_price":1249.0,"occupancy_rate":0.84,"flight_duration_sec":4848.0,"unlock_cost":2300000.0},
+	{"origin":"SEA","origin_city":"Seattle","destination":"LAX","destination_city":"Los Angeles",
+	 "distance_mi":954,"ticket_price":149.0,"occupancy_rate":0.84,"flight_duration_sec":706.0,"unlock_cost":35000.0},
+	{"origin":"SEA","origin_city":"Seattle","destination":"LHR","destination_city":"London",
+	 "distance_mi":4776,"ticket_price":899.0,"occupancy_rate":0.84,"flight_duration_sec":3534.0,"unlock_cost":1600000.0},
+	{"origin":"SEA","origin_city":"Seattle","destination":"NRT","destination_city":"Tokyo",
+	 "distance_mi":4783,"ticket_price":999.0,"occupancy_rate":0.85,"flight_duration_sec":3540.0,"unlock_cost":1700000.0},
+	{"origin":"BOS","origin_city":"Boston","destination":"MIA","destination_city":"Miami",
+	 "distance_mi":1258,"ticket_price":179.0,"occupancy_rate":0.84,"flight_duration_sec":931.0,"unlock_cost":50000.0},
+	{"origin":"BOS","origin_city":"Boston","destination":"LAX","destination_city":"Los Angeles",
+	 "distance_mi":2596,"ticket_price":299.0,"occupancy_rate":0.83,"flight_duration_sec":1921.0,"unlock_cost":140000.0},
+	{"origin":"BOS","origin_city":"Boston","destination":"LHR","destination_city":"London",
+	 "distance_mi":3267,"ticket_price":649.0,"occupancy_rate":0.88,"flight_duration_sec":2418.0,"unlock_cost":700000.0},
+	{"origin":"BOS","origin_city":"Boston","destination":"CDG","destination_city":"Paris",
+	 "distance_mi":3446,"ticket_price":699.0,"occupancy_rate":0.87,"flight_duration_sec":2550.0,"unlock_cost":850000.0},
 ]
 
 var airline_name   := "Sky Haven Airways"
@@ -286,6 +371,7 @@ var routes: Array = [
 ]
 
 var used_market: Array = []
+var routes_pool_cursor: int = 0
 
 var _autosave_timer  := 0.0
 var _window_focused  := true
@@ -298,6 +384,7 @@ func _ready() -> void:
 	load_game()
 	while used_market.size() < USED_MARKET_SIZE:
 		used_market.append(_gen_used_listing())
+	_replenish_routes()
 
 func _process(delta: float) -> void:
 	var effective := delta * (time_scale if _window_focused else 1.0)
@@ -314,6 +401,31 @@ func cycle_speed() -> void:
 		1.0: time_scale = 2.0
 		2.0: time_scale = 5.0
 		_:   time_scale = 1.0
+
+func _replenish_routes() -> void:
+	var locked_count := 0
+	for route in routes:
+		if route.get("locked", false):
+			locked_count += 1
+	while locked_count < MIN_LOCKED_ROUTES and routes_pool_cursor < ROUTE_POOL.size():
+		var entry: Dictionary = ROUTE_POOL[routes_pool_cursor]
+		routes_pool_cursor += 1
+		routes.append({
+			"origin":              entry["origin"],
+			"origin_city":         entry["origin_city"],
+			"destination":         entry["destination"],
+			"destination_city":    entry["destination_city"],
+			"distance_mi":         entry["distance_mi"],
+			"ticket_price":        entry["ticket_price"],
+			"occupancy_rate":      entry["occupancy_rate"],
+			"flight_duration_sec": entry["flight_duration_sec"],
+			"locked":              true,
+			"unlock_cost":         entry["unlock_cost"],
+			"assigned_plane":      -1,
+			"status":              "inactive",
+			"flight_progress":     0.0,
+		})
+		locked_count += 1
 
 # ── Flight loop ───────────────────────────────────────────────────────────────
 
@@ -413,6 +525,7 @@ func unlock_route(route_idx: int) -> void:
 	total_spent += cost
 	cash_changed.emit()
 	route["locked"] = false
+	_replenish_routes()
 	assignment_changed.emit()
 
 # ── Purchase ──────────────────────────────────────────────────────────────────
@@ -528,6 +641,7 @@ func save_game() -> void:
 		"flight_log":   flight_log.duplicate(true),
 		"planes": planes.duplicate(true),
 		"routes": routes.duplicate(true),
+		"routes_pool_cursor": routes_pool_cursor,
 		"used_market": used_market.duplicate(true),
 	}
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -554,17 +668,9 @@ func load_game() -> void:
 	if data.has("planes"):
 		planes = data["planes"]
 	if data.has("routes"):
-		var saved: Array = data["routes"]
-		# Merge saved mutable state into the canonical route list by matching
-		# origin+destination so adding new routes never breaks old saves.
-		for saved_route in saved:
-			for route in routes:
-				if route["origin"] == saved_route["origin"] and route["destination"] == saved_route["destination"]:
-					route["locked"]          = saved_route.get("locked", route["locked"])
-					route["assigned_plane"]  = saved_route.get("assigned_plane", -1)
-					route["status"]          = saved_route.get("status", "inactive")
-					route["flight_progress"] = saved_route.get("flight_progress", 0.0)
-					break
+		routes = data["routes"]
+	if data.has("routes_pool_cursor"):
+		routes_pool_cursor = int(data["routes_pool_cursor"])
 	if data.has("used_market"):
 		used_market = data["used_market"]
 	var elapsed := Time.get_unix_time_from_system() - float(data.get("timestamp", Time.get_unix_time_from_system()))
