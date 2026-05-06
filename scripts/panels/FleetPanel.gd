@@ -67,7 +67,7 @@ func _process(_delta: float) -> void:
 		var route: Dictionary = GameState.routes[int(plane["assigned_route"])]
 		var pct := float(route["flight_progress"]) / float(route["flight_duration_sec"]) * 100.0
 		lbl.visible = true
-		lbl.text = "En route  %s  %.0f%%" % [_bar(pct, 12), pct]
+		lbl.text = "En route  %s  %.0f%%" % [_bar(pct, 10), pct]
 
 	for plane_idx in _repair_labels:
 		var lbl: Label = _repair_labels[plane_idx]
@@ -118,63 +118,72 @@ func _plane_card(plane_idx: int) -> Control:
 	card.add_theme_stylebox_override("panel", style)
 	m.add_child(card)
 
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 3)
-	card.add_child(vbox)
+	# Two-column layout: left = identity, right = status/condition/repair
+	var cols := HBoxContainer.new()
+	cols.add_theme_constant_override("separation", 12)
+	card.add_child(cols)
 
-	vbox.add_child(_lbl(plane["name"], C_TEXT, 12))
+	# ── Left column ──────────────────────────────────────────────────
+	var left := VBoxContainer.new()
+	left.add_theme_constant_override("separation", 3)
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cols.add_child(left)
 
 	var status: String = plane["status"]
 	var route_suffix := ""
 	if status == "flying":
 		var r: Dictionary = GameState.routes[int(plane["assigned_route"])]
 		route_suffix = "  (%s -> %s)" % [r["origin"], r["destination"]]
-	vbox.add_child(_lbl("Seats: %d  |  %s%s" % [plane["seats"], status.capitalize(), route_suffix], _status_color(status), 11))
-	vbox.add_child(_lbl("Total flights: %d" % int(plane["total_flights"]), C_DIM, 11))
 
-	vbox.add_child(_sep())
+	left.add_child(_lbl(plane["name"], C_TEXT, 12))
+	left.add_child(_lbl("Seats: %d  |  %s%s" % [plane["seats"], status.capitalize(), route_suffix], _status_color(status), 11))
+	left.add_child(_lbl("Total flights: %d" % int(plane["total_flights"]), C_DIM, 11))
+
+	# ── Right column ─────────────────────────────────────────────────
+	var right := VBoxContainer.new()
+	right.add_theme_constant_override("separation", 3)
+	right.alignment = BoxContainer.ALIGNMENT_CENTER
+	cols.add_child(right)
 
 	# Live flight progress — shown only when flying, updated in _process
 	var prog_lbl := _lbl("", C_ACCENT, 11)
+	prog_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	prog_lbl.visible = (status == "flying")
 	if status == "flying":
 		var route: Dictionary = GameState.routes[int(plane["assigned_route"])]
 		var pct := float(route["flight_progress"]) / float(route["flight_duration_sec"]) * 100.0
-		prog_lbl.text = "En route  %s  %.0f%%" % [_bar(pct, 12), pct]
+		prog_lbl.text = "En route  %s  %.0f%%" % [_bar(pct, 10), pct]
 	_progress_labels[plane_idx] = prog_lbl
-	vbox.add_child(prog_lbl)
+	right.add_child(prog_lbl)
 
 	# Condition bar
 	var cond: float = float(plane["condition"])
 	var bar_color := C_GREEN if cond >= 80.0 else (C_YELLOW if cond >= 50.0 else C_RED)
-	vbox.add_child(_lbl("Condition  %s  %.0f%%" % [_bar(cond), cond], bar_color, 11))
+	var cond_lbl := _lbl("Condition  %s  %.0f%%" % [_bar(cond, 10), cond], bar_color, 11)
+	cond_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	right.add_child(cond_lbl)
 
 	var cost := GameState.repair_cost_for_plane(plane)
 
 	if status == "maintenance":
 		# Live repair countdown — updated in _process
 		var rep_lbl := _lbl("", C_YELLOW, 11)
+		rep_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		_repair_labels[plane_idx] = rep_lbl
-		vbox.add_child(rep_lbl)
-	elif cond >= 100.0:
-		vbox.add_child(_lbl("No repairs needed", C_DIM, 11))
-	else:
-		# Repair button — available from grounded or flying (will auto-pause route)
-		var hbox := HBoxContainer.new()
-		hbox.add_theme_constant_override("separation", 6)
-		vbox.add_child(hbox)
-
-		var suffix := "  (pauses route)" if status == "flying" else ""
-		var cost_lbl := _lbl("Repair to 100%%:  %s%s" % [GameState.format_money(cost), suffix], C_YELLOW, 11)
-		cost_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		hbox.add_child(cost_lbl)
+		right.add_child(rep_lbl)
+	elif cond < 100.0:
+		# Repair button
+		var suffix := "  (pauses)" if status == "flying" else ""
+		var cost_lbl := _lbl("%s%s" % [GameState.format_money(cost), suffix], C_YELLOW, 11)
+		cost_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		right.add_child(cost_lbl)
 
 		var can_afford := GameState.cash >= cost
 		var btn := _action_btn("Repair", C_GREEN if can_afford else C_DIM)
 		btn.disabled = not can_afford
-		var p_idx := plane_idx
+		var p_idx: int = plane_idx
 		btn.pressed.connect(func(): GameState.repair_plane(p_idx))
-		hbox.add_child(btn)
+		right.add_child(btn)
 
 	return m
 
