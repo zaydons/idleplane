@@ -263,18 +263,48 @@ func _show_picker(route_idx: int) -> void:
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(vbox)
 
-	var any := false
+	# Build two sorted lists: available first, then reassignable
+	var available := []
+	var reassignable := []
 	for plane_idx in GameState.planes.size():
 		var plane: Dictionary = GameState.planes[plane_idx]
 		if plane["status"] == "maintenance" or float(plane["condition"]) <= 0.0:
 			continue
-		any = true
-		var is_elsewhere := int(plane["assigned_route"]) != -1 and int(plane["assigned_route"]) != route_idx
+		var assigned_route: int = int(plane["assigned_route"])
+		if assigned_route != -1 and assigned_route != route_idx:
+			reassignable.append(plane_idx)
+		else:
+			available.append(plane_idx)
+
+	var any := available.size() > 0 or reassignable.size() > 0
+
+	for plane_idx in available:
+		var plane: Dictionary = GameState.planes[plane_idx]
 		var btn := Button.new()
-		btn.text = plane["name"] + ("  (reassign)" if is_elsewhere else "")
+		btn.text = plane["name"]
 		btn.flat = true
 		btn.add_theme_font_size_override("font_size", 13)
-		btn.add_theme_color_override("font_color",         C_DIM if is_elsewhere else C_TEXT)
+		btn.add_theme_color_override("font_color",         C_TEXT)
+		btn.add_theme_color_override("font_hover_color",   C_ACCENT)
+		btn.add_theme_color_override("font_pressed_color", C_ACCENT)
+		btn.add_theme_stylebox_override("normal",  _ghost_box())
+		btn.add_theme_stylebox_override("hover",   _ghost_box(Color(C_ACCENT.r, C_ACCENT.g, C_ACCENT.b, 0.15)))
+		btn.add_theme_stylebox_override("pressed", _ghost_box(Color(C_ACCENT.r, C_ACCENT.g, C_ACCENT.b, 0.15)))
+		var p_idx := plane_idx
+		btn.pressed.connect(func(): GameState.assign_plane_to_route(p_idx, route_idx))
+		vbox.add_child(btn)
+
+	if available.size() > 0 and reassignable.size() > 0:
+		vbox.add_child(_thin_sep())
+
+	for plane_idx in reassignable:
+		var plane: Dictionary = GameState.planes[plane_idx]
+		var r: Dictionary = GameState.routes[int(plane["assigned_route"])]
+		var btn := Button.new()
+		btn.text = "%s  %s->%s" % [plane["name"], r["origin"], r["destination"]]
+		btn.flat = true
+		btn.add_theme_font_size_override("font_size", 13)
+		btn.add_theme_color_override("font_color",         C_DIM)
 		btn.add_theme_color_override("font_hover_color",   C_ACCENT)
 		btn.add_theme_color_override("font_pressed_color", C_ACCENT)
 		btn.add_theme_stylebox_override("normal",  _ghost_box())
@@ -342,6 +372,13 @@ func _ghost_box(bg := Color(0, 0, 0, 0)) -> StyleBoxFlat:
 	s.content_margin_left = 4.0;  s.content_margin_right  = 4.0
 	s.content_margin_top  = 3.0;  s.content_margin_bottom = 3.0
 	return s
+
+func _thin_sep() -> Control:
+	var sep := HSeparator.new()
+	var s := StyleBoxFlat.new()
+	s.bg_color = Color(C_BORDER.r, C_BORDER.g, C_BORDER.b, 0.4)
+	sep.add_theme_stylebox_override("separator", s)
+	return sep
 
 func _sep() -> Control:
 	var sep := HSeparator.new()
