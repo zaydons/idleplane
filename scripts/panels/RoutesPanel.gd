@@ -290,7 +290,7 @@ func _show_picker(route_idx: int) -> void:
 		btn.add_theme_stylebox_override("normal",  _ghost_box())
 		btn.add_theme_stylebox_override("hover",   _ghost_box(Color(C_ACCENT.r, C_ACCENT.g, C_ACCENT.b, 0.15)))
 		btn.add_theme_stylebox_override("pressed", _ghost_box(Color(C_ACCENT.r, C_ACCENT.g, C_ACCENT.b, 0.15)))
-		var p_idx := plane_idx
+		var p_idx: int = plane_idx
 		btn.pressed.connect(func(): GameState.assign_plane_to_route(p_idx, route_idx))
 		vbox.add_child(btn)
 
@@ -310,7 +310,7 @@ func _show_picker(route_idx: int) -> void:
 		btn.add_theme_stylebox_override("normal",  _ghost_box())
 		btn.add_theme_stylebox_override("hover",   _ghost_box(Color(C_ACCENT.r, C_ACCENT.g, C_ACCENT.b, 0.15)))
 		btn.add_theme_stylebox_override("pressed", _ghost_box(Color(C_ACCENT.r, C_ACCENT.g, C_ACCENT.b, 0.15)))
-		var p_idx := plane_idx
+		var p_idx: int = plane_idx
 		btn.pressed.connect(func(): GameState.assign_plane_to_route(p_idx, route_idx))
 		vbox.add_child(btn)
 
