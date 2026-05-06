@@ -108,7 +108,7 @@ func _route_card(route_idx: int) -> Control:
 	hbox.add_theme_constant_override("separation", 6)
 	vbox.add_child(hbox)
 
-	var assigned: int = route["assigned_plane"]
+	var assigned: int = int(route["assigned_plane"])
 	var aircraft_lbl := Label.new()
 	aircraft_lbl.add_theme_font_size_override("font_size", 13)
 	aircraft_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -140,10 +140,10 @@ func _route_card(route_idx: int) -> Control:
 	elif assigned != -1:
 		var plane_st: String = GameState.planes[assigned]["status"]
 		if plane_st == "maintenance":
-			prog_lbl.text = "Paused — under repair"
+			prog_lbl.text = "Paused - under repair"
 			prog_lbl.add_theme_color_override("font_color", C_YELLOW)
 		elif float(GameState.planes[assigned]["condition"]) <= 0.0:
-			prog_lbl.text = "Paused — needs repair"
+			prog_lbl.text = "Paused - needs repair"
 			prog_lbl.add_theme_color_override("font_color", C_RED)
 		prog_lbl.visible = prog_lbl.text != ""
 	else:
