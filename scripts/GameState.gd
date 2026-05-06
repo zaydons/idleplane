@@ -221,7 +221,12 @@ func _tick(delta: float) -> void:
 			plane["repair_time_left"] = 0.0
 			plane["repair_total_time"] = 0.0
 			plane["condition"] = 100.0
-			plane["status"] = "grounded"
+			var route_idx: int = int(plane["assigned_route"])
+			if route_idx != -1:
+				plane["status"] = "flying"
+				routes[route_idx]["status"] = "active"
+			else:
+				plane["status"] = "grounded"
 			repair_completed.emit(i)
 
 	for i in routes.size():
@@ -230,6 +235,11 @@ func _tick(delta: float) -> void:
 			continue
 		var plane_idx: int = route["assigned_plane"]
 		var plane: Dictionary = planes[plane_idx]
+		if float(plane["condition"]) <= 0.0:
+			plane["status"] = "grounded"
+			route["status"] = "inactive"
+			assignment_changed.emit()
+			continue
 		route["flight_progress"] = float(route["flight_progress"]) + delta
 		while float(route["flight_progress"]) >= float(route["flight_duration_sec"]):
 			route["flight_progress"] = float(route["flight_progress"]) - float(route["flight_duration_sec"])
@@ -378,7 +388,7 @@ static func repair_cost_for_plane(plane: Dictionary) -> float:
 
 func repair_plane(plane_idx: int) -> void:
 	var plane: Dictionary = planes[plane_idx]
-	if plane["status"] != "grounded":
+	if plane["status"] == "maintenance":
 		return
 	var damage := 100.0 - float(plane["condition"])
 	if damage <= 0.0:
@@ -389,6 +399,11 @@ func repair_plane(plane_idx: int) -> void:
 	cash        -= cost
 	total_spent += cost
 	cash_changed.emit()
+	# Pause route if currently flying — it will auto-resume when repair completes
+	var route_idx: int = int(plane["assigned_route"])
+	if route_idx != -1:
+		routes[route_idx]["status"] = "inactive"
+		routes[route_idx]["flight_progress"] = 0.0
 	var repair_time := damage * float(plane["repair_time_sec_per_pct"])
 	plane["repair_time_left"] = repair_time
 	plane["repair_total_time"] = repair_time
@@ -474,6 +489,10 @@ func _simulate_offline(elapsed: float) -> void:
 		var n_flights := int(total / dur)
 		route["flight_progress"] = fmod(total, dur)
 		for _j in n_flights:
+			if float(plane["condition"]) <= 0.0:
+				plane["status"] = "grounded"
+				route["status"] = "inactive"
+				break
 			var rev := float(route["ticket_price"]) * float(plane["seats"]) * float(route["occupancy_rate"])
 			cash         += rev
 			total_earned += rev

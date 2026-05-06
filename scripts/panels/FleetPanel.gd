@@ -159,12 +159,13 @@ func _plane_card(plane_idx: int) -> Control:
 	elif cond >= 100.0:
 		vbox.add_child(_lbl("No repairs needed", C_DIM, 11))
 	else:
-		# Repair button row
+		# Repair button — available from grounded or flying (will auto-pause route)
 		var hbox := HBoxContainer.new()
 		hbox.add_theme_constant_override("separation", 6)
 		vbox.add_child(hbox)
 
-		var cost_lbl := _lbl("Repair to 100%%:  %s" % GameState.format_money(cost), C_YELLOW, 11)
+		var suffix := "  (pauses route)" if status == "flying" else ""
+		var cost_lbl := _lbl("Repair to 100%%:  %s%s" % [GameState.format_money(cost), suffix], C_YELLOW, 11)
 		cost_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hbox.add_child(cost_lbl)
 

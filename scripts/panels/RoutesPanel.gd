@@ -122,19 +122,32 @@ func _route_card(route_idx: int) -> Control:
 		btn.pressed.connect(func(): _show_picker(route_idx))
 		hbox.add_child(btn)
 	else:
+		var plane_status: String = GameState.planes[assigned]["status"]
+		var name_color := C_YELLOW if plane_status == "maintenance" else C_GREEN
 		aircraft_lbl.text = "Aircraft: %s" % GameState.planes[assigned]["name"]
-		aircraft_lbl.add_theme_color_override("font_color", C_GREEN)
+		aircraft_lbl.add_theme_color_override("font_color", name_color)
 		hbox.add_child(aircraft_lbl)
 		var btn := _action_btn("Unassign", C_RED)
 		btn.pressed.connect(func(): GameState.unassign_route(route_idx))
 		hbox.add_child(btn)
 
-	# Live progress bar (only visible when active)
+	# Status line: in-flight progress, paused reason, or nothing
 	var prog_lbl := _lbl("", C_ACCENT, 11)
-	prog_lbl.visible = (route["status"] == "active")
 	if route["status"] == "active":
 		var pct := float(route["flight_progress"]) / float(route["flight_duration_sec"]) * 100.0
 		prog_lbl.text = "In flight  %s  %.0f%%" % [_bar(pct, 12), pct]
+		prog_lbl.visible = true
+	elif assigned != -1:
+		var plane_st: String = GameState.planes[assigned]["status"]
+		if plane_st == "maintenance":
+			prog_lbl.text = "Paused — under repair"
+			prog_lbl.add_theme_color_override("font_color", C_YELLOW)
+		elif float(GameState.planes[assigned]["condition"]) <= 0.0:
+			prog_lbl.text = "Paused — needs repair"
+			prog_lbl.add_theme_color_override("font_color", C_RED)
+		prog_lbl.visible = prog_lbl.text != ""
+	else:
+		prog_lbl.visible = false
 	_progress_labels[route_idx] = prog_lbl
 	vbox.add_child(prog_lbl)
 
