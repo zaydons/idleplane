@@ -230,9 +230,6 @@ func _tick(delta: float) -> void:
 			continue
 		var plane_idx: int = route["assigned_plane"]
 		var plane: Dictionary = planes[plane_idx]
-		if float(plane["condition"]) <= 0.0:
-			unassign_route(i)
-			continue
 		route["flight_progress"] = float(route["flight_progress"]) + delta
 		while float(route["flight_progress"]) >= float(route["flight_duration_sec"]):
 			route["flight_progress"] = float(route["flight_progress"]) - float(route["flight_duration_sec"])
@@ -477,13 +474,6 @@ func _simulate_offline(elapsed: float) -> void:
 		var n_flights := int(total / dur)
 		route["flight_progress"] = fmod(total, dur)
 		for _j in n_flights:
-			if float(plane["condition"]) <= 0.0:
-				plane["status"] = "grounded"
-				plane["assigned_route"] = -1
-				route["assigned_plane"] = -1
-				route["status"] = "inactive"
-				route["flight_progress"] = 0.0
-				break
 			var rev := float(route["ticket_price"]) * float(plane["seats"]) * float(route["occupancy_rate"])
 			cash         += rev
 			total_earned += rev
