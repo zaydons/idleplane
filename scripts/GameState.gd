@@ -382,6 +382,7 @@ func _ready() -> void:
 	get_tree().root.focus_entered.connect(func(): _window_focused = true)
 	get_tree().root.focus_exited.connect(func(): _window_focused = false)
 	load_game()
+	_reconcile_state()
 	while used_market.size() < USED_MARKET_SIZE:
 		used_market.append(_gen_used_listing())
 	_replenish_routes()
@@ -707,6 +708,23 @@ func load_game() -> void:
 	if elapsed > 0.0:
 		_simulate_offline(elapsed)
 
+func _reconcile_state() -> void:
+	# Fix planes that are grounded but cross-assigned to a route — start them flying.
+	# This repairs saves corrupted by the offline-repair bug (repair completed offline
+	# but route was never resumed).
+	for i in planes.size():
+		var plane: Dictionary = planes[i]
+		var route_idx: int = int(plane["assigned_route"])
+		if route_idx < 0 or route_idx >= routes.size():
+			plane["assigned_route"] = -1
+			continue
+		var route: Dictionary = routes[route_idx]
+		if int(route["assigned_plane"]) == i \
+				and plane["status"] == "grounded" \
+				and float(plane["condition"]) > 0.0:
+			plane["status"] = "flying"
+			route["status"] = "active"
+
 func _simulate_offline(elapsed: float) -> void:
 	for i in planes.size():
 		var plane: Dictionary = planes[i]
@@ -716,7 +734,12 @@ func _simulate_offline(elapsed: float) -> void:
 		if float(plane["repair_time_left"]) <= 0.0:
 			plane["repair_total_time"] = 0.0
 			plane["condition"] = 100.0
-			plane["status"] = "grounded"
+			var route_idx: int = int(plane["assigned_route"])
+			if route_idx != -1:
+				plane["status"] = "flying"
+				routes[route_idx]["status"] = "active"
+			else:
+				plane["status"] = "grounded"
 
 	for i in routes.size():
 		var route: Dictionary = routes[i]
