@@ -380,7 +380,10 @@ var _rng             := RandomNumberGenerator.new()
 func _ready() -> void:
 	_rng.randomize()
 	get_tree().root.focus_entered.connect(func(): _window_focused = true)
-	get_tree().root.focus_exited.connect(func(): _window_focused = false)
+	get_tree().root.focus_exited.connect(func():
+		_window_focused = false
+		save_game()
+	)
 	load_game()
 	_reconcile_state()
 	while used_market.size() < USED_MARKET_SIZE:
@@ -501,6 +504,7 @@ func assign_plane_to_route(plane_idx: int, route_idx: int) -> void:
 	routes[route_idx]["status"] = "active"
 	routes[route_idx]["flight_progress"] = 0.0
 	assignment_changed.emit()
+	save_game()
 
 func unassign_route(route_idx: int) -> void:
 	var plane_idx: int = routes[route_idx]["assigned_plane"]
@@ -512,6 +516,7 @@ func unassign_route(route_idx: int) -> void:
 	routes[route_idx]["status"] = "inactive"
 	routes[route_idx]["flight_progress"] = 0.0
 	assignment_changed.emit()
+	save_game()
 
 # ── Route unlock ─────────────────────────────────────────────────────────────
 
@@ -528,6 +533,7 @@ func unlock_route(route_idx: int) -> void:
 	route["locked"] = false
 	_replenish_routes()
 	assignment_changed.emit()
+	save_game()
 
 # ── Purchase ──────────────────────────────────────────────────────────────────
 
@@ -573,6 +579,7 @@ func buy_used_plane(market_idx: int) -> void:
 	used_market[market_idx] = _gen_used_listing()
 	used_market_changed.emit()
 	assignment_changed.emit()
+	save_game()
 
 func buy_plane(catalog_idx: int) -> void:
 	var entry: Dictionary = PLANE_CATALOG[catalog_idx]
@@ -596,6 +603,7 @@ func buy_plane(catalog_idx: int) -> void:
 		"total_flights": 0,
 	})
 	assignment_changed.emit()
+	save_game()
 
 # ── Repair ────────────────────────────────────────────────────────────────────
 
@@ -635,6 +643,7 @@ func sell_plane(plane_idx: int) -> void:
 		if ap > plane_idx:
 			route["assigned_plane"] = ap - 1
 	assignment_changed.emit()
+	save_game()
 
 func repair_plane(plane_idx: int) -> void:
 	var plane: Dictionary = planes[plane_idx]
