@@ -46,6 +46,9 @@ func refresh() -> void:
 		_vbox.remove_child(child)
 		child.queue_free()
 	_vbox.add_child(_section_header("FLEET"))
+	var total_repair := GameState.total_repair_cost()
+	if total_repair > 0.0:
+		_vbox.add_child(_repair_all_bar(total_repair))
 	for i in GameState.planes.size():
 		_vbox.add_child(_plane_card(i))
 	_vbox.add_child(_section_header("BUY AIRCRAFT"))
@@ -95,6 +98,29 @@ func _section_header(title: String) -> Control:
 	l.add_theme_color_override("font_color", C_ACCENT)
 	l.add_theme_font_size_override("font_size", 13)
 	m.add_child(l)
+	return m
+
+func _repair_all_bar(total_cost: float) -> Control:
+	var m := MarginContainer.new()
+	m.add_theme_constant_override("margin_left",   12)
+	m.add_theme_constant_override("margin_right",  12)
+	m.add_theme_constant_override("margin_top",    0)
+	m.add_theme_constant_override("margin_bottom", 2)
+
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 8)
+	m.add_child(hbox)
+
+	var lbl := _lbl("Repair all:  %s" % GameState.format_money(total_cost), C_YELLOW, 11)
+	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(lbl)
+
+	var can_afford := GameState.cash >= total_cost
+	var btn := _action_btn("Repair All", C_GREEN if can_afford else C_DIM)
+	btn.disabled = not can_afford
+	btn.pressed.connect(func(): GameState.repair_all_planes())
+	hbox.add_child(btn)
+
 	return m
 
 func _plane_card(plane_idx: int) -> Control:

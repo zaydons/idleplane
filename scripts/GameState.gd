@@ -614,6 +614,37 @@ static func repair_cost_for_plane(plane: Dictionary) -> float:
 	var age_mult := 1.0 + int(plane["total_flights"]) * 0.005
 	return damage * float(plane["repair_cost_per_pct"]) * age_mult
 
+func total_repair_cost() -> float:
+	var total := 0.0
+	for plane in planes:
+		if plane["status"] != "maintenance" and float(plane["condition"]) < 100.0:
+			total += repair_cost_for_plane(plane)
+	return total
+
+func repair_all_planes() -> void:
+	var total := total_repair_cost()
+	if total <= 0.0 or cash < total:
+		return
+	for i in planes.size():
+		var plane: Dictionary = planes[i]
+		if plane["status"] == "maintenance" or float(plane["condition"]) >= 100.0:
+			continue
+		var damage := 100.0 - float(plane["condition"])
+		var cost := repair_cost_for_plane(plane)
+		cash        -= cost
+		total_spent += cost
+		var route_idx: int = int(plane["assigned_route"])
+		if route_idx != -1:
+			routes[route_idx]["status"] = "inactive"
+			routes[route_idx]["flight_progress"] = 0.0
+		var repair_time := damage * float(plane["repair_time_sec_per_pct"])
+		plane["repair_time_left"] = repair_time
+		plane["repair_total_time"] = repair_time
+		plane["status"] = "maintenance"
+	cash_changed.emit()
+	assignment_changed.emit()
+	save_game()
+
 static func sell_price_for_plane(plane: Dictionary) -> float:
 	var base := 0.0
 	for entry in PLANE_CATALOG:
