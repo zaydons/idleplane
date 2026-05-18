@@ -1,13 +1,13 @@
 extends Control
 
-const C_CARD   := Color("#0d1525")
-const C_BORDER := Color("#1a2840")
-const C_TEXT   := Color("#c0d0e8")
-const C_DIM    := Color("#6a7c94")
-const C_ACCENT := Color("#5090d8")
-const C_GREEN  := Color("#38c870")
-const C_YELLOW := Color("#e8b830")
-const C_RED    := Color("#d84838")
+const C_CARD   := Color("#1c1c1e")
+const C_BORDER := Color("#3a3a3c")
+const C_TEXT   := Color("#f5f5f7")
+const C_DIM    := Color("#8e8e93")
+const C_ACCENT := Color("#0a84ff")
+const C_GREEN  := Color("#30d158")
+const C_YELLOW := Color("#ffd60a")
+const C_RED    := Color("#ff453a")
 
 var _vbox: VBoxContainer
 var _picker: Control = null
@@ -64,12 +64,12 @@ func _process(_delta: float) -> void:
 func _section_header(title: String) -> Control:
 	var m := MarginContainer.new()
 	m.add_theme_constant_override("margin_left",   12)
-	m.add_theme_constant_override("margin_top",    6)
+	m.add_theme_constant_override("margin_top",    10)
 	m.add_theme_constant_override("margin_bottom", 2)
 	var l := Label.new()
 	l.text = title
 	l.add_theme_color_override("font_color", C_ACCENT)
-	l.add_theme_font_size_override("font_size", 13)
+	l.add_theme_font_size_override("font_size", 14)
 	m.add_child(l)
 	return m
 
@@ -85,12 +85,12 @@ func _route_card(route_idx: int) -> Control:
 	var card := PanelContainer.new()
 	var style := StyleBoxFlat.new()
 	style.bg_color = C_CARD
-	style.border_color = C_BORDER
-	style.set_border_width_all(1)
-	style.content_margin_left   = 8.0
-	style.content_margin_right  = 8.0
-	style.content_margin_top    = 6.0
-	style.content_margin_bottom = 6.0
+	style.set_border_width_all(0)
+	style.set_corner_radius_all(12)
+	style.content_margin_left   = 12.0
+	style.content_margin_right  = 12.0
+	style.content_margin_top    = 10.0
+	style.content_margin_bottom = 10.0
 	card.add_theme_stylebox_override("panel", style)
 	m.add_child(card)
 
@@ -104,9 +104,9 @@ func _route_card(route_idx: int) -> Control:
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cols.add_child(left)
 
-	left.add_child(_lbl("%s -> %s" % [route["origin"], route["destination"]], C_TEXT, 13))
-	left.add_child(_lbl("%s / %s" % [route["origin_city"], route["destination_city"]], C_DIM, 11))
-	left.add_child(_lbl("%d mi  |  %s/seat" % [route["distance_mi"], GameState.format_money(route["ticket_price"])], C_DIM, 11))
+	left.add_child(_lbl("%s -> %s" % [route["origin"], route["destination"]], C_TEXT, 14))
+	left.add_child(_lbl("%s / %s" % [route["origin_city"], route["destination_city"]], C_DIM, 12))
+	left.add_child(_lbl("%d mi  |  %s/seat" % [route["distance_mi"], GameState.format_money(route["ticket_price"])], C_DIM, 12))
 
 	# ── Right: aircraft + status ──────────────────────────────────────
 	var right := VBoxContainer.new()
@@ -121,7 +121,7 @@ func _route_card(route_idx: int) -> Control:
 	right.add_child(ac_row)
 
 	if assigned == -1:
-		var none_lbl := _lbl("No aircraft", C_YELLOW, 11)
+		var none_lbl := _lbl("No aircraft", C_YELLOW, 12)
 		none_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		ac_row.add_child(none_lbl)
 		var btn := _action_btn("Assign", C_ACCENT)
@@ -130,7 +130,7 @@ func _route_card(route_idx: int) -> Control:
 	else:
 		var plane_status: String = GameState.planes[assigned]["status"]
 		var name_color := C_YELLOW if plane_status == "maintenance" else C_GREEN
-		var name_lbl := _lbl(GameState.planes[assigned]["name"], name_color, 11)
+		var name_lbl := _lbl(GameState.planes[assigned]["name"], name_color, 12)
 		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		ac_row.add_child(name_lbl)
 		var btn := _action_btn("Unassign", C_RED)
@@ -138,7 +138,7 @@ func _route_card(route_idx: int) -> Control:
 		ac_row.add_child(btn)
 
 	# Progress / pause status
-	var prog_lbl := _lbl("", C_ACCENT, 11)
+	var prog_lbl := _lbl("", C_ACCENT, 12)
 	prog_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	if route["status"] == "active":
 		var pct := float(route["flight_progress"]) / float(route["flight_duration_sec"]) * 100.0
