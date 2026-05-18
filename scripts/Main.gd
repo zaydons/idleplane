@@ -7,15 +7,15 @@ const PANEL_PATHS := [
 ]
 const TAB_NAMES := ["Fleet", "Routes", "Finances"]
 
-const C_BG      := Color("#080d1a")
-const C_BAR     := Color("#060b15")
-const C_BORDER  := Color("#1a2840")
+const C_BG      := Color("#000000")
+const C_BAR     := Color("#1c1c1e")
+const C_BORDER  := Color("#3a3a3c")
 const C_TAB_ON  := Color("#183060")
-const C_TAB_OFF := Color("#0a1428")
-const C_TEXT    := Color("#c0d0e8")
-const C_DIM     := Color("#6a7c94")
-const C_ACCENT  := Color("#5090d8")
-const C_GOLD    := Color("#e8b830")
+const C_TAB_OFF := Color("#1c1c1e")
+const C_TEXT    := Color("#f5f5f7")
+const C_DIM     := Color("#8e8e93")
+const C_ACCENT  := Color("#0a84ff")
+const C_GOLD    := Color("#ffd60a")
 
 var _panels := []
 var _tab_btns := []
@@ -48,7 +48,7 @@ func _build() -> void:
 
 func _make_top_bar() -> Control:
 	var bar := PanelContainer.new()
-	bar.custom_minimum_size = Vector2(0, 32)
+	bar.custom_minimum_size = Vector2(0, 44)
 	bar.add_theme_stylebox_override("panel", _flat(C_BAR, C_BORDER, 0, 0, 1, 0))
 
 	var hbox := HBoxContainer.new()
@@ -57,12 +57,12 @@ func _make_top_bar() -> Control:
 
 	_spacer(hbox, 8)
 
-	var name_lbl := _lbl(GameState.airline_name, C_ACCENT, 11)
+	var name_lbl := _lbl(GameState.airline_name, C_ACCENT, 13)
 	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hbox.add_child(name_lbl)
 
-	_cash_lbl = _lbl("", C_GOLD, 11)
+	_cash_lbl = _lbl("", C_GOLD, 13)
 	_cash_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_cash_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hbox.add_child(_cash_lbl)
@@ -72,7 +72,7 @@ func _make_top_bar() -> Control:
 	_speed_btn = Button.new()
 	_speed_btn.text = "1×"
 	_speed_btn.flat = true
-	_speed_btn.add_theme_font_size_override("font_size", 12)
+	_speed_btn.add_theme_font_size_override("font_size", 13)
 	_speed_btn.add_theme_color_override("font_color", C_DIM)
 	_speed_btn.add_theme_color_override("font_hover_color", C_TEXT)
 	_speed_btn.add_theme_color_override("font_pressed_color", C_TEXT)
@@ -119,7 +119,7 @@ func _make_content() -> Control:
 
 func _make_tab_bar() -> Control:
 	var bar := PanelContainer.new()
-	bar.custom_minimum_size = Vector2(0, 40)
+	bar.custom_minimum_size = Vector2(0, 52)
 	bar.add_theme_stylebox_override("panel", _flat(C_BAR, C_BORDER, 1, 0, 0, 0))
 
 	var hbox := HBoxContainer.new()
@@ -131,7 +131,7 @@ func _make_tab_bar() -> Control:
 		btn.text = TAB_NAMES[i]
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.flat = true
-		btn.add_theme_font_size_override("font_size", 12)
+		btn.add_theme_font_size_override("font_size", 13)
 		var idx := i
 		btn.pressed.connect(func(): _on_tab_pressed(idx))
 		hbox.add_child(btn)
@@ -178,9 +178,9 @@ func _show_cheat_dialog() -> void:
 	var card := PanelContainer.new()
 	card.custom_minimum_size = Vector2(220, 0)
 	var cs := StyleBoxFlat.new()
-	cs.bg_color = Color("#0d1525")
-	cs.border_color = Color("#5090d8")
-	cs.set_border_width_all(1)
+	cs.bg_color = Color("#1c1c1e")
+	cs.set_border_width_all(0)
+	cs.set_corner_radius_all(12)
 	cs.content_margin_left = 14.0; cs.content_margin_right  = 14.0
 	cs.content_margin_top  = 12.0; cs.content_margin_bottom = 12.0
 	card.add_theme_stylebox_override("panel", cs)
@@ -193,17 +193,17 @@ func _show_cheat_dialog() -> void:
 	var title := Label.new()
 	title.text = "ADD CASH"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_color_override("font_color", Color("#5090d8"))
+	title.add_theme_color_override("font_color", Color("#0a84ff"))
 	title.add_theme_font_size_override("font_size", 13)
 	vbox.add_child(title)
 
 	var input := LineEdit.new()
 	input.placeholder_text = "Amount (e.g. 100000)"
 	input.add_theme_font_size_override("font_size", 12)
-	input.add_theme_color_override("font_color", Color("#c0d0e8"))
+	input.add_theme_color_override("font_color", Color("#f5f5f7"))
 	var input_style := StyleBoxFlat.new()
-	input_style.bg_color = Color("#060b15")
-	input_style.border_color = Color("#1a2840")
+	input_style.bg_color = Color("#000000")
+	input_style.border_color = Color("#3a3a3c")
 	input_style.set_border_width_all(1)
 	input_style.content_margin_left = 8.0; input_style.content_margin_right  = 8.0
 	input_style.content_margin_top  = 6.0; input_style.content_margin_bottom = 6.0
@@ -215,7 +215,7 @@ func _show_cheat_dialog() -> void:
 	btn_row.add_theme_constant_override("separation", 8)
 	vbox.add_child(btn_row)
 
-	var cancel_btn := _dialog_btn("Cancel", Color("#6a7c94"))
+	var cancel_btn := _dialog_btn("Cancel", Color("#8e8e93"))
 	cancel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cancel_btn.pressed.connect(func():
 		_cheat_overlay.queue_free()
@@ -223,7 +223,7 @@ func _show_cheat_dialog() -> void:
 	)
 	btn_row.add_child(cancel_btn)
 
-	var confirm_btn := _dialog_btn("Add", Color("#38c870"))
+	var confirm_btn := _dialog_btn("Add", Color("#30d158"))
 	confirm_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	confirm_btn.pressed.connect(func():
 		var amount := input.text.to_float()
@@ -241,18 +241,18 @@ func _dialog_btn(label: String, color: Color) -> Button:
 	var btn := Button.new()
 	btn.text = label
 	btn.flat = false
-	btn.add_theme_font_size_override("font_size", 12)
+	btn.add_theme_font_size_override("font_size", 13)
 	btn.add_theme_color_override("font_color",         color)
 	btn.add_theme_color_override("font_hover_color",   color)
 	btn.add_theme_color_override("font_pressed_color", color)
 	var s := StyleBoxFlat.new()
-	s.bg_color = Color(color.r, color.g, color.b, 0.15)
-	s.border_color = color
-	s.set_border_width_all(1)
-	s.content_margin_left = 8.0; s.content_margin_right  = 8.0
-	s.content_margin_top  = 6.0; s.content_margin_bottom = 6.0
+	s.bg_color = Color(color.r, color.g, color.b, 0.18)
+	s.set_border_width_all(0)
+	s.set_corner_radius_all(50)
+	s.content_margin_left = 16.0; s.content_margin_right  = 16.0
+	s.content_margin_top  = 10.0; s.content_margin_bottom = 10.0
 	var sh := s.duplicate() as StyleBoxFlat
-	sh.bg_color = Color(color.r, color.g, color.b, 0.3)
+	sh.bg_color = Color(color.r, color.g, color.b, 0.30)
 	btn.add_theme_stylebox_override("normal",  s)
 	btn.add_theme_stylebox_override("hover",   sh)
 	btn.add_theme_stylebox_override("pressed", s)

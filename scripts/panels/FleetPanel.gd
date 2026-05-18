@@ -1,13 +1,13 @@
 extends Control
 
-const C_CARD   := Color("#0d1525")
-const C_BORDER := Color("#1a2840")
-const C_TEXT   := Color("#c0d0e8")
-const C_DIM    := Color("#6a7c94")
-const C_ACCENT := Color("#5090d8")
-const C_GREEN  := Color("#38c870")
-const C_YELLOW := Color("#e8b830")
-const C_RED    := Color("#d84838")
+const C_CARD   := Color("#1c1c1e")
+const C_BORDER := Color("#3a3a3c")
+const C_TEXT   := Color("#f5f5f7")
+const C_DIM    := Color("#8e8e93")
+const C_ACCENT := Color("#0a84ff")
+const C_GREEN  := Color("#30d158")
+const C_YELLOW := Color("#ffd60a")
+const C_RED    := Color("#ff453a")
 
 var _vbox: VBoxContainer
 var _progress_labels: Dictionary = {}  # plane_idx -> en-route Label
@@ -91,12 +91,12 @@ func _process(_delta: float) -> void:
 func _section_header(title: String) -> Control:
 	var m := MarginContainer.new()
 	m.add_theme_constant_override("margin_left",   12)
-	m.add_theme_constant_override("margin_top",    6)
+	m.add_theme_constant_override("margin_top",    10)
 	m.add_theme_constant_override("margin_bottom", 2)
 	var l := Label.new()
 	l.text = title
 	l.add_theme_color_override("font_color", C_ACCENT)
-	l.add_theme_font_size_override("font_size", 13)
+	l.add_theme_font_size_override("font_size", 14)
 	m.add_child(l)
 	return m
 
@@ -111,7 +111,7 @@ func _repair_all_bar(total_cost: float) -> Control:
 	hbox.add_theme_constant_override("separation", 8)
 	m.add_child(hbox)
 
-	var lbl := _lbl("Repair all:  %s" % GameState.format_money(total_cost), C_YELLOW, 11)
+	var lbl := _lbl("Repair all:  %s" % GameState.format_money(total_cost), C_YELLOW, 12)
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(lbl)
 
@@ -135,12 +135,12 @@ func _plane_card(plane_idx: int) -> Control:
 	var card := PanelContainer.new()
 	var style := StyleBoxFlat.new()
 	style.bg_color = C_CARD
-	style.border_color = C_BORDER
-	style.set_border_width_all(1)
-	style.content_margin_left   = 8.0
-	style.content_margin_right  = 8.0
-	style.content_margin_top    = 6.0
-	style.content_margin_bottom = 6.0
+	style.set_border_width_all(0)
+	style.set_corner_radius_all(12)
+	style.content_margin_left   = 12.0
+	style.content_margin_right  = 12.0
+	style.content_margin_top    = 10.0
+	style.content_margin_bottom = 10.0
 	card.add_theme_stylebox_override("panel", style)
 	m.add_child(card)
 
@@ -161,9 +161,9 @@ func _plane_card(plane_idx: int) -> Control:
 		var r: Dictionary = GameState.routes[int(plane["assigned_route"])]
 		route_suffix = "  (%s -> %s)" % [r["origin"], r["destination"]]
 
-	left.add_child(_lbl(plane["name"], C_TEXT, 12))
-	left.add_child(_lbl("Seats: %d  |  %s%s" % [plane["seats"], status.capitalize(), route_suffix], _status_color(status), 11))
-	left.add_child(_lbl("Total flights: %d" % int(plane["total_flights"]), C_DIM, 11))
+	left.add_child(_lbl(plane["name"], C_TEXT, 14))
+	left.add_child(_lbl("Seats: %d  |  %s%s" % [plane["seats"], status.capitalize(), route_suffix], _status_color(status), 12))
+	left.add_child(_lbl("Total flights: %d" % int(plane["total_flights"]), C_DIM, 12))
 
 	# ── Right column ─────────────────────────────────────────────────
 	var right := VBoxContainer.new()
@@ -172,7 +172,7 @@ func _plane_card(plane_idx: int) -> Control:
 	cols.add_child(right)
 
 	# Live flight progress — shown only when flying, updated in _process
-	var prog_lbl := _lbl("", C_ACCENT, 11)
+	var prog_lbl := _lbl("", C_ACCENT, 12)
 	prog_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	prog_lbl.visible = (status == "flying")
 	if status == "flying":
@@ -185,7 +185,7 @@ func _plane_card(plane_idx: int) -> Control:
 	# Condition bar
 	var cond: float = float(plane["condition"])
 	var bar_color := C_GREEN if cond >= 80.0 else (C_YELLOW if cond >= 50.0 else C_RED)
-	var cond_lbl := _lbl("Condition  %s  %.0f%%" % [_bar(cond, 10), cond], bar_color, 11)
+	var cond_lbl := _lbl("Condition  %s  %.0f%%" % [_bar(cond, 10), cond], bar_color, 12)
 	cond_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	right.add_child(cond_lbl)
 
@@ -193,14 +193,14 @@ func _plane_card(plane_idx: int) -> Control:
 
 	if status == "maintenance":
 		# Live repair countdown — updated in _process
-		var rep_lbl := _lbl("", C_YELLOW, 11)
+		var rep_lbl := _lbl("", C_YELLOW, 12)
 		rep_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		_repair_labels[plane_idx] = rep_lbl
 		right.add_child(rep_lbl)
 	elif cond < 100.0:
 		# Repair button
 		var suffix := "  (pauses)" if status == "flying" else ""
-		var cost_lbl := _lbl("%s%s" % [GameState.format_money(cost), suffix], C_YELLOW, 11)
+		var cost_lbl := _lbl("%s%s" % [GameState.format_money(cost), suffix], C_YELLOW, 12)
 		cost_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		right.add_child(cost_lbl)
 
@@ -215,7 +215,7 @@ func _plane_card(plane_idx: int) -> Control:
 	if status != "flying":
 		var sell_price := GameState.sell_price_for_plane(plane)
 		var sell_btn := _action_btn("Sell  %s" % GameState.format_money(sell_price), C_DIM)
-		sell_btn.add_theme_font_size_override("font_size", 10)
+		sell_btn.add_theme_font_size_override("font_size", 13)
 		var p_idx: int = plane_idx
 		sell_btn.pressed.connect(func(): GameState.sell_plane(p_idx))
 		right.add_child(sell_btn)
@@ -234,12 +234,12 @@ func _market_card(catalog_idx: int) -> Control:
 	var card := PanelContainer.new()
 	var style := StyleBoxFlat.new()
 	style.bg_color = C_CARD
-	style.border_color = C_BORDER
-	style.set_border_width_all(1)
-	style.content_margin_left   = 8.0
-	style.content_margin_right  = 8.0
-	style.content_margin_top    = 6.0
-	style.content_margin_bottom = 6.0
+	style.set_border_width_all(0)
+	style.set_corner_radius_all(12)
+	style.content_margin_left   = 12.0
+	style.content_margin_right  = 12.0
+	style.content_margin_top    = 10.0
+	style.content_margin_bottom = 10.0
 	card.add_theme_stylebox_override("panel", style)
 	m.add_child(card)
 
@@ -253,9 +253,9 @@ func _market_card(catalog_idx: int) -> Control:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(info)
 
-	info.add_child(_lbl(entry["name"], C_TEXT, 12))
-	info.add_child(_lbl("%d seats  |  Wear: %.1f%%/flight" % [entry["seats"], entry["wear_per_flight"]], C_DIM, 11))
-	info.add_child(_lbl(entry["description"], C_DIM, 11))
+	info.add_child(_lbl(entry["name"], C_TEXT, 14))
+	info.add_child(_lbl("%d seats  |  Wear: %.1f%%/flight" % [entry["seats"], entry["wear_per_flight"]], C_DIM, 12))
+	info.add_child(_lbl(entry["description"], C_DIM, 12))
 
 	# Price + buy button column
 	var right := VBoxContainer.new()
@@ -263,7 +263,7 @@ func _market_card(catalog_idx: int) -> Control:
 	right.alignment = BoxContainer.ALIGNMENT_CENTER
 	hbox.add_child(right)
 
-	right.add_child(_lbl(GameState.format_money(entry["price"]), C_YELLOW, 11))
+	right.add_child(_lbl(GameState.format_money(entry["price"]), C_YELLOW, 12))
 
 	var can_afford := GameState.cash >= float(entry["price"])
 	var btn := _action_btn("Buy", C_GREEN if can_afford else C_DIM)
@@ -286,12 +286,12 @@ func _used_card(market_idx: int) -> Control:
 	var card := PanelContainer.new()
 	var style := StyleBoxFlat.new()
 	style.bg_color = C_CARD
-	style.border_color = C_BORDER
-	style.set_border_width_all(1)
-	style.content_margin_left   = 8.0
-	style.content_margin_right  = 8.0
-	style.content_margin_top    = 6.0
-	style.content_margin_bottom = 6.0
+	style.set_border_width_all(0)
+	style.set_corner_radius_all(12)
+	style.content_margin_left   = 12.0
+	style.content_margin_right  = 12.0
+	style.content_margin_top    = 10.0
+	style.content_margin_bottom = 10.0
 	card.add_theme_stylebox_override("panel", style)
 	m.add_child(card)
 
@@ -304,18 +304,18 @@ func _used_card(market_idx: int) -> Control:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(info)
 
-	info.add_child(_lbl(listing["name"], C_TEXT, 12))
-	info.add_child(_lbl("%d seats  |  Wear: %.1f%%/flight" % [listing["seats"], listing["wear_per_flight"]], C_DIM, 11))
+	info.add_child(_lbl(listing["name"], C_TEXT, 14))
+	info.add_child(_lbl("%d seats  |  Wear: %.1f%%/flight" % [listing["seats"], listing["wear_per_flight"]], C_DIM, 12))
 	var cond: float = float(listing["condition"])
 	var bar_color := C_GREEN if cond >= 80.0 else (C_YELLOW if cond >= 50.0 else C_RED)
-	info.add_child(_lbl("Condition  %s  %.0f%%" % [_bar(cond, 10), cond], bar_color, 11))
+	info.add_child(_lbl("Condition  %s  %.0f%%" % [_bar(cond, 10), cond], bar_color, 12))
 
 	var right := VBoxContainer.new()
 	right.add_theme_constant_override("separation", 4)
 	right.alignment = BoxContainer.ALIGNMENT_CENTER
 	hbox.add_child(right)
 
-	right.add_child(_lbl(GameState.format_money(listing["price"]), C_YELLOW, 11))
+	right.add_child(_lbl(GameState.format_money(listing["price"]), C_YELLOW, 12))
 
 	var can_afford := GameState.cash >= float(listing["price"])
 	var btn := _action_btn("Buy", C_GREEN if can_afford else C_DIM)
@@ -332,18 +332,18 @@ func _action_btn(label: String, color: Color) -> Button:
 	var btn := Button.new()
 	btn.text = label
 	btn.flat = false
-	btn.add_theme_font_size_override("font_size", 11)
+	btn.add_theme_font_size_override("font_size", 13)
 	btn.add_theme_color_override("font_color",         color)
 	btn.add_theme_color_override("font_hover_color",   color)
 	btn.add_theme_color_override("font_pressed_color", color)
 	var s := StyleBoxFlat.new()
-	s.bg_color = Color(color.r, color.g, color.b, 0.15)
-	s.border_color = color
-	s.set_border_width_all(1)
-	s.content_margin_left = 12.0;  s.content_margin_right  = 12.0
-	s.content_margin_top  = 6.0;  s.content_margin_bottom = 6.0
+	s.bg_color = Color(color.r, color.g, color.b, 0.18)
+	s.set_border_width_all(0)
+	s.set_corner_radius_all(50)
+	s.content_margin_left = 16.0;  s.content_margin_right  = 16.0
+	s.content_margin_top  = 10.0;  s.content_margin_bottom = 10.0
 	var sh := s.duplicate() as StyleBoxFlat
-	sh.bg_color = Color(color.r, color.g, color.b, 0.3)
+	sh.bg_color = Color(color.r, color.g, color.b, 0.30)
 	btn.add_theme_stylebox_override("normal",  s)
 	btn.add_theme_stylebox_override("hover",   sh)
 	btn.add_theme_stylebox_override("pressed", s)
