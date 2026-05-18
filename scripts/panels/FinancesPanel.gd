@@ -1,13 +1,13 @@
 extends Control
 
-const C_CARD   := Color("#0d1525")
-const C_BORDER := Color("#1a2840")
-const C_TEXT   := Color("#c0d0e8")
-const C_DIM    := Color("#6a7c94")
-const C_ACCENT := Color("#5090d8")
-const C_GOLD   := Color("#e8b830")
-const C_GREEN  := Color("#38c870")
-const C_RED    := Color("#d84838")
+const C_CARD   := Color("#1c1c1e")
+const C_BORDER := Color("#3a3a3c")
+const C_TEXT   := Color("#f5f5f7")
+const C_DIM    := Color("#8e8e93")
+const C_ACCENT := Color("#0a84ff")
+const C_GOLD   := Color("#ffd60a")
+const C_GREEN  := Color("#30d158")
+const C_RED    := Color("#ff453a")
 
 var _vbox:     VBoxContainer
 var _cash_lbl: Label
@@ -135,12 +135,12 @@ func _make_card() -> Control:
 	var card := PanelContainer.new()
 	var style := StyleBoxFlat.new()
 	style.bg_color = C_CARD
-	style.border_color = C_BORDER
-	style.set_border_width_all(1)
-	style.content_margin_left   = 8.0
-	style.content_margin_right  = 8.0
-	style.content_margin_top    = 6.0
-	style.content_margin_bottom = 6.0
+	style.set_border_width_all(0)
+	style.set_corner_radius_all(12)
+	style.content_margin_left   = 12.0
+	style.content_margin_right  = 12.0
+	style.content_margin_top    = 10.0
+	style.content_margin_bottom = 10.0
 	card.add_theme_stylebox_override("panel", style)
 	m.add_child(card)
 
@@ -153,12 +153,12 @@ func _make_card() -> Control:
 func _section_header(title: String) -> Control:
 	var m := MarginContainer.new()
 	m.add_theme_constant_override("margin_left",   12)
-	m.add_theme_constant_override("margin_top",    6)
+	m.add_theme_constant_override("margin_top",    10)
 	m.add_theme_constant_override("margin_bottom", 2)
 	var l := Label.new()
 	l.text = title
 	l.add_theme_color_override("font_color", C_ACCENT)
-	l.add_theme_font_size_override("font_size", 13)
+	l.add_theme_font_size_override("font_size", 14)
 	m.add_child(l)
 	return m
 
@@ -167,13 +167,13 @@ func _row(label_text: String, value_text: String, value_color: Color) -> HBoxCon
 	var lbl := Label.new()
 	lbl.text = label_text
 	lbl.add_theme_color_override("font_color", C_DIM)
-	lbl.add_theme_font_size_override("font_size", 11)
+	lbl.add_theme_font_size_override("font_size", 12)
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(lbl)
 	var val := Label.new()
 	val.text = value_text
 	val.add_theme_color_override("font_color", value_color)
-	val.add_theme_font_size_override("font_size", 11)
+	val.add_theme_font_size_override("font_size", 12)
 	val.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	hbox.add_child(val)
 	return hbox

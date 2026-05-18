@@ -171,13 +171,13 @@ func _locked_card(route_idx: int) -> Control:
 
 	var card := PanelContainer.new()
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color("#080f1e")
-	style.border_color = Color("#12203a")
-	style.set_border_width_all(1)
-	style.content_margin_left   = 8.0
-	style.content_margin_right  = 8.0
-	style.content_margin_top    = 6.0
-	style.content_margin_bottom = 6.0
+	style.bg_color = Color("#0d0d0e")
+	style.set_border_width_all(0)
+	style.set_corner_radius_all(12)
+	style.content_margin_left   = 12.0
+	style.content_margin_right  = 12.0
+	style.content_margin_top    = 10.0
+	style.content_margin_bottom = 10.0
 	card.add_theme_stylebox_override("panel", style)
 	m.add_child(card)
 
@@ -190,9 +190,9 @@ func _locked_card(route_idx: int) -> Control:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(info)
 
-	info.add_child(_lbl("%s -> %s" % [route["origin"], route["destination"]], C_DIM, 13))
-	info.add_child(_lbl("%s / %s" % [route["origin_city"], route["destination_city"]], C_DIM, 11))
-	info.add_child(_lbl("%d mi  |  %s/seat" % [route["distance_mi"], GameState.format_money(route["ticket_price"])], C_DIM, 11))
+	info.add_child(_lbl("%s -> %s" % [route["origin"], route["destination"]], C_DIM, 14))
+	info.add_child(_lbl("%s / %s" % [route["origin_city"], route["destination_city"]], C_DIM, 12))
+	info.add_child(_lbl("%d mi  |  %s/seat" % [route["distance_mi"], GameState.format_money(route["ticket_price"])], C_DIM, 12))
 
 	var right := VBoxContainer.new()
 	right.add_theme_constant_override("separation", 4)
@@ -241,10 +241,10 @@ func _show_picker(route_idx: int) -> void:
 	card.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var cs := StyleBoxFlat.new()
 	cs.bg_color = C_CARD
-	cs.border_color = C_ACCENT
-	cs.set_border_width_all(1)
-	cs.content_margin_left = 10.0;  cs.content_margin_right  = 10.0
-	cs.content_margin_top  = 8.0;   cs.content_margin_bottom = 8.0
+	cs.set_border_width_all(0)
+	cs.set_corner_radius_all(12)
+	cs.content_margin_left = 12.0;  cs.content_margin_right  = 12.0
+	cs.content_margin_top  = 10.0;  cs.content_margin_bottom = 10.0
 	card.add_theme_stylebox_override("panel", cs)
 	center.add_child(card)
 
@@ -252,7 +252,7 @@ func _show_picker(route_idx: int) -> void:
 	outer_vbox.add_theme_constant_override("separation", 4)
 	card.add_child(outer_vbox)
 
-	var title := _lbl("SELECT AIRCRAFT", C_ACCENT, 11)
+	var title := _lbl("SELECT AIRCRAFT", C_ACCENT, 13)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	outer_vbox.add_child(title)
 	outer_vbox.add_child(_sep())
@@ -360,13 +360,13 @@ func _action_btn(label: String, color: Color) -> Button:
 	btn.add_theme_color_override("font_hover_color",   color)
 	btn.add_theme_color_override("font_pressed_color", color)
 	var s := StyleBoxFlat.new()
-	s.bg_color = Color(color.r, color.g, color.b, 0.15)
-	s.border_color = color
-	s.set_border_width_all(1)
-	s.content_margin_left = 12.0;  s.content_margin_right  = 12.0
-	s.content_margin_top  = 6.0;  s.content_margin_bottom = 6.0
+	s.bg_color = Color(color.r, color.g, color.b, 0.18)
+	s.set_border_width_all(0)
+	s.set_corner_radius_all(50)
+	s.content_margin_left = 16.0;  s.content_margin_right  = 16.0
+	s.content_margin_top  = 10.0;  s.content_margin_bottom = 10.0
 	var sh := s.duplicate() as StyleBoxFlat
-	sh.bg_color = Color(color.r, color.g, color.b, 0.3)
+	sh.bg_color = Color(color.r, color.g, color.b, 0.30)
 	btn.add_theme_stylebox_override("normal",  s)
 	btn.add_theme_stylebox_override("hover",   sh)
 	btn.add_theme_stylebox_override("pressed", s)
